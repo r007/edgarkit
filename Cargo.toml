@@ -1,0 +1,31 @@
+[package]
+name = "edgar"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+# Internal dependencies
+parsers = { path = "../parsers" }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_urlencoded = { workspace = true }
+quick-xml = { workspace = true }
+
+# HTTP & Async
+reqwest = { workspace = true }
+tokio = { workspace = true }
+async-trait = { workspace = true }
+futures = { workspace = true }
+governor = { workspace = true }
+
+# Error handling
+thiserror = { workspace = true }
+tracing = { workspace = true }
+
+# Utilities
+regex = { workspace = true }
+chrono = { workspace = true }
+fastrand = { workspace = true }
+flate2 = { workspace = true }
