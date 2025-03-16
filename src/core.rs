@@ -195,7 +195,7 @@ impl Edgar {
     /// # Rate Limiting
     ///
     /// Implements a token bucket algorithm for rate limiting and exponential backoff with jitter for rate limit responses (HTTP 429).
-    pub(crate) async fn get_bytes(&self, url: &str) -> Result<Vec<u8>> {
+    pub async fn get_bytes(&self, url: &str) -> Result<Vec<u8>> {
         let mut retries = 0;
 
         loop {
@@ -260,7 +260,7 @@ impl Edgar {
     ///
     /// Implements a token bucket algorithm for rate limiting and exponential
     /// backoff with jitter for rate limit responses (HTTP 429).
-    pub(crate) async fn get(&self, url: &str) -> Result<String> {
+    pub async fn get(&self, url: &str) -> Result<String> {
         let mut retries = 0;
 
         loop {
