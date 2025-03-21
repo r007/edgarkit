@@ -1,6 +1,6 @@
-use super::error::{EdgarError, Result};
 use super::CompanyOperations;
 use super::Edgar;
+use super::error::{EdgarError, Result};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use serde_json;

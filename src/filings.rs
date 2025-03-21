@@ -1,7 +1,7 @@
+use super::Edgar;
 use super::error::{EdgarError, Result};
 use super::options::FilingOptions;
 use super::traits::FilingOperations;
-use super::Edgar;
 use async_trait::async_trait;
 use chrono::{DateTime, FixedOffset};
 use serde::Deserialize;

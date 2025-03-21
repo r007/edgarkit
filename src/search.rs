@@ -27,9 +27,9 @@
 //! }
 //! ```
 
+use super::Edgar;
 use super::error::{EdgarError, Result};
 use super::traits::SearchOperations;
-use super::Edgar;
 use async_trait::async_trait;
 use serde::Deserialize;
 

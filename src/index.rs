@@ -1,7 +1,7 @@
+use super::Edgar;
 use super::error::{EdgarError, Result};
 use super::options::FilingOptions;
 use super::traits::IndexOperations;
-use super::Edgar;
 use async_trait::async_trait;
 use chrono::{Datelike, NaiveDateTime};
 use flate2::read::GzDecoder;
@@ -837,9 +837,11 @@ mod tests {
             .unwrap();
 
         assert!(entries.iter().all(|e| e.cik == 1234567));
-        assert!(entries
-            .iter()
-            .all(|e| ["10-K", "10-Q"].contains(&e.form_type.trim())));
+        assert!(
+            entries
+                .iter()
+                .all(|e| ["10-K", "10-Q"].contains(&e.form_type.trim()))
+        );
         assert!(entries.len() <= 10);
     }
 

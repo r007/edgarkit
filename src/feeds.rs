@@ -1,7 +1,7 @@
-use super::error::{EdgarError, Result};
-use super::options::FeedOptions;
 use super::Edgar;
 use super::FeedOperations;
+use super::error::{EdgarError, Result};
+use super::options::FeedOptions;
 use async_trait::async_trait;
 use parsers::{
     atom::{AtomConfig, AtomDocument, AtomParser},
@@ -288,11 +288,12 @@ mod tests {
         );
 
         // Test multiple items have dates
-        assert!(feed
-            .channel
-            .items
-            .iter()
-            .all(|item| item.pub_date.is_some()));
+        assert!(
+            feed.channel
+                .items
+                .iter()
+                .all(|item| item.pub_date.is_some())
+        );
     }
 
     #[test]
