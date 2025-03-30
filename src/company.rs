@@ -399,7 +399,7 @@ impl FieldExtractor {
 /// # Examples
 ///
 /// ```no_run
-/// # use your_crate::{Edgar, CompanyOperations};
+/// # use edgar::{Edgar, CompanyOperations};
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 /// let edgar = Edgar::new();
 ///
@@ -653,10 +653,10 @@ mod tests {
     use super::*;
     use std::fs;
 
-    const COMPANY_FACTS_FIXTURE: &str = "fixtures/tickers/companyfacts.json";
-    const COMPANY_CONCEPT_FIXTURE: &str = "fixtures/tickers/companyconcept.json";
-    const COMPANY_TICKERS_EXCHANGE_FIXTURE: &str = "fixtures/tickers/company_tickers_exchange.json";
-    const MUTUAL_FUND_TICKERS_FIXTURE: &str = "fixtures/tickers/company_tickers_mf.json";
+    const COMPANY_FACTS_FIXTURE: &str = "../fixtures/tickers/companyfacts.json";
+    const COMPANY_CONCEPT_FIXTURE: &str = "../fixtures/tickers/companyconcept.json";
+    const COMPANY_TICKERS_EXCHANGE_FIXTURE: &str = "../fixtures/tickers/company_tickers_exchange.json";
+    const MUTUAL_FUND_TICKERS_FIXTURE: &str = "../fixtures/tickers/company_tickers_mf.json";
 
     #[test]
     fn test_parse_company_tickers_exchange() {
@@ -847,7 +847,7 @@ mod tests {
 
     #[test]
     fn test_parse_frames() {
-        let content = fs::read_to_string("fixtures/tickers/frames.json").unwrap();
+        let content = fs::read_to_string("../fixtures/tickers/frames.json").unwrap();
         let frame: Frame = serde_json::from_str(&content).unwrap();
 
         assert_eq!(frame.taxonomy, "us-gaap");

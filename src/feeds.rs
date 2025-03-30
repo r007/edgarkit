@@ -221,11 +221,11 @@ mod tests {
     use super::*;
     use std::fs;
 
-    const RSS_USGAAP_FIXTURE: &str = "fixtures/rss/usgaap.rss";
-    const RSS_PRESSREL_FIXTURE: &str = "fixtures/rss/pressreleases.rss";
-    const RSS_TESTIMONY_FIXTURE: &str = "fixtures/rss/testimony.rss";
-    const ATOM_FIXTURE: &str = "fixtures/atom/atom.xml";
-    const ATOM1_FIXTURE: &str = "fixtures/atom/atom1.xml";
+    const RSS_USGAAP_FIXTURE: &str = "../fixtures/rss/usgaap.rss";
+    const RSS_PRESSREL_FIXTURE: &str = "../fixtures/rss/pressreleases.rss";
+    const RSS_TESTIMONY_FIXTURE: &str = "../fixtures/rss/testimony.rss";
+    const ATOM_FIXTURE: &str = "../fixtures/atom/atom.xml";
+    const ATOM1_FIXTURE: &str = "../fixtures/atom/atom1.xml";
 
     fn setup_edgar() -> Edgar {
         Edgar::new("test_agent example@example.com").unwrap()

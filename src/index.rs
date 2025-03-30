@@ -651,10 +651,10 @@ mod tests {
     use super::*;
     use std::fs;
 
-    const FULL_INDEX_FIXTURE: &str = "fixtures/index/full-index.json";
-    const FULL_INDEX_QTR_FIXTURE: &str = "fixtures/index/full-index-qtr.json";
-    const DAILY_INDEX_FIXTURE: &str = "fixtures/index/daily-index.json";
-    const DAILY_INDEX_2023_FIXTURE: &str = "fixtures/index/daily-index-2023.json";
+    const FULL_INDEX_FIXTURE: &str = "../fixtures/index/full-index.json";
+    const FULL_INDEX_QTR_FIXTURE: &str = "../fixtures/index/full-index-qtr.json";
+    const DAILY_INDEX_FIXTURE: &str = "../fixtures/index/daily-index.json";
+    const DAILY_INDEX_2023_FIXTURE: &str = "../fixtures/index/daily-index-2023.json";
 
     #[test]
     fn test_parse_full_index() {

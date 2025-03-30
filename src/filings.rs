@@ -579,7 +579,7 @@ mod tests {
     use super::*;
     use std::fs;
 
-    const SUBMISSION_FIXTURE: &str = "fixtures/submissions/submission.json";
+    const SUBMISSION_FIXTURE: &str = "../fixtures/submissions/submission.json";
 
     #[test]
     fn test_datetime_parsing() {
@@ -620,7 +620,7 @@ mod tests {
 
     #[test]
     fn test_parse_directory() {
-        let content = fs::read_to_string("fixtures/submissions/directory.json").unwrap();
+        let content = fs::read_to_string("../fixtures/submissions/directory.json").unwrap();
         let dir: DirectoryResponse = serde_json::from_str(&content).unwrap();
 
         assert!(!dir.directory.item.is_empty());

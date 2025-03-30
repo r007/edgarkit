@@ -562,7 +562,7 @@ mod tests {
     use super::*;
     use std::fs;
 
-    const SEARCH_RESPONSE_FIXTURE: &str = "fixtures/search/search-index.json";
+    const SEARCH_RESPONSE_FIXTURE: &str = "../fixtures/search/search-index.json";
 
     #[test]
     fn test_parse_search_response() {
