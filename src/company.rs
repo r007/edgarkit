@@ -655,7 +655,8 @@ mod tests {
 
     const COMPANY_FACTS_FIXTURE: &str = "../fixtures/tickers/companyfacts.json";
     const COMPANY_CONCEPT_FIXTURE: &str = "../fixtures/tickers/companyconcept.json";
-    const COMPANY_TICKERS_EXCHANGE_FIXTURE: &str = "../fixtures/tickers/company_tickers_exchange.json";
+    const COMPANY_TICKERS_EXCHANGE_FIXTURE: &str =
+        "../fixtures/tickers/company_tickers_exchange.json";
     const MUTUAL_FUND_TICKERS_FIXTURE: &str = "../fixtures/tickers/company_tickers_mf.json";
 
     #[test]
