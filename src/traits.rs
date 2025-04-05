@@ -59,12 +59,12 @@ pub trait FilingOperations {
     async fn get_filing_content_by_id(&self, cik: &str, filing_id: &str) -> Result<String>;
     /// Fetches the latest filing of a specific type for a company
     async fn get_latest_filing_content(&self, cik: &str, form_type: &str) -> Result<String>;
-    /// Generates URLs for text filings based on specified options without downloading content
+    /// Generates URLs for text filings with original SEC.gov links based on specified options without downloading content
     async fn get_text_filing_links(
         &self,
         cik: &str,
         opts: Option<FilingOptions>,
-    ) -> Result<Vec<(DetailedFiling, String)>>;
+    ) -> Result<Vec<(DetailedFiling, String, String)>>;
 }
 
 /// Operations related to EDGAR feed data retrieval.

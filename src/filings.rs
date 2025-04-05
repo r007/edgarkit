@@ -198,6 +198,7 @@ enum UrlType {
     EntityDirectory,
     FilingContent,
     TextFiling,
+    OriginalFiling,
 }
 
 impl Edgar {
@@ -242,6 +243,15 @@ impl Edgar {
                     self.edgar_archives_url, cik, formatted_acc, acc_no
                 ))
             }
+            UrlType::OriginalFiling => {
+                // For original filings: format is /Archives/edgar/data/CIK/ACC_NO_NO_DASHES/ACC_NO_WITH_DASHES-index.html
+                let (cik, acc_no) = (params[0], params[1]);
+                let formatted_acc = acc_no.replace("-", "");
+                Ok(format!(
+                    "{}/data/{}/{}/{}-index.html",
+                    self.edgar_archives_url, cik, formatted_acc, acc_no
+                ))
+            }
         }
     }
 
@@ -252,6 +262,11 @@ impl Edgar {
     // Add a convenience method to get text filing URL directly
     fn get_text_filing_url(&self, cik: &str, accession_number: &str) -> Result<String> {
         self.build_url(UrlType::TextFiling, &[cik, accession_number])
+    }
+
+    // Add a convenience method to get original filing URL directly
+    fn get_original_filing_url(&self, cik: &str, accession_number: &str) -> Result<String> {
+        self.build_url(UrlType::OriginalFiling, &[cik, accession_number])
     }
 }
 
@@ -529,7 +544,8 @@ impl FilingOperations for Edgar {
         self.get(&url).await
     }
 
-    /// Generates URLs for text filings based on specified options without downloading content
+    /// Generates URLs for text filings with original SEC.gov links based on specified options
+    /// without downloading content
     ///
     /// This function fetches filings metadata for a company identified by its CIK,
     /// filters them based on the provided options, and then generates URLs for accessing
@@ -542,35 +558,27 @@ impl FilingOperations for Edgar {
     ///
     /// # Returns
     ///
-    /// Returns a `Result` containing a vector of tuples with (DetailedFiling, text_url).
+    /// Returns a `Result` containing a vector of tuples with (DetailedFiling, text_url, sec_gov_url).
     /// If an error occurs during the process, it returns an `Err` variant.
     async fn get_text_filing_links(
         &self,
         cik: &str,
         opts: Option<FilingOptions>,
-    ) -> Result<Vec<(DetailedFiling, String)>> {
-        // Get filings based on options
+    ) -> Result<Vec<(DetailedFiling, String, String)>> {
         let filings = self.filings(cik, opts).await?;
 
-        // Create a vector to hold the results
-        let mut results = Vec::with_capacity(filings.len());
-
-        // For each filing, generate the text filing URL
+        let mut links = Vec::new();
         for filing in filings {
-            match self.get_text_filing_url(cik, &filing.accession_number) {
-                Ok(url) => results.push((filing, url)),
-                Err(err) => {
-                    // Log the error but continue with other filings
-                    tracing::warn!(
-                        "Failed to generate URL for filing {}: {}",
-                        filing.accession_number,
-                        err
-                    );
-                }
-            }
+            // Get text filing URL (for downloading raw content)
+            let text_url = self.get_text_filing_url(cik, &filing.accession_number)?;
+
+            // Get original SEC.gov URL (for web browsing)
+            let sec_gov_url = self.get_original_filing_url(cik, &filing.accession_number)?;
+
+            links.push((filing, text_url, sec_gov_url));
         }
 
-        Ok(results)
+        Ok(links)
     }
 }
 
@@ -673,10 +681,17 @@ mod tests {
         );
 
         // Verify each link is properly formatted for text filings
-        for (filing, url) in &filing_links {
+        for (filing, url, sec_url) in &filing_links {
             // URLs should follow format: {base}/data/{cik}/{acc_no_without_dashes}/{acc_no_with_dashes}.txt
             let expected_url_pattern = format!(
                 "{}/data/320193/{}/{}.txt",
+                edgar.edgar_archives_url,
+                filing.accession_number.replace("-", ""),
+                filing.accession_number
+            );
+
+            let expected_sec_url_pattern = format!(
+                "{}/data/320193/{}/{}-index.html",
                 edgar.edgar_archives_url,
                 filing.accession_number.replace("-", ""),
                 filing.accession_number
@@ -686,6 +701,11 @@ mod tests {
                 &expected_url_pattern, url,
                 "Text filing URL is incorrectly formatted"
             );
+
+            assert_eq!(
+                &expected_sec_url_pattern, sec_url,
+                "Original SEC filing URL is incorrectly formatted"
+            )
         }
 
         // Test filtering by form type (10-K filings only)
@@ -696,7 +716,7 @@ mod tests {
             .unwrap();
 
         // Verify all returned filings are 10-K forms
-        for (filing, _) in &form_filing_links {
+        for (filing, _, _) in &form_filing_links {
             assert_eq!(
                 filing.form, "10-K",
                 "Filing form should be 10-K when filtered by form type"
