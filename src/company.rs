@@ -92,7 +92,8 @@ pub struct Frame {
     pub label: Option<String>,
     #[serde(default)]
     pub description: Option<String>,
-    #[serde(rename = "pts")]
+    pub pts: u64,
+    #[serde(rename = "data")]
     pub data_points: Vec<FrameDataPoint>,
 }
 
@@ -101,14 +102,10 @@ pub struct FrameDataPoint {
     #[serde(rename = "entityName")]
     pub entity_name: String,
     pub cik: u64,
-    pub val: serde_json::Value,
+    pub val: u64,
     pub accn: String,
-    pub fy: i32,
-    pub fp: String,
-    pub form: String,
-    pub filed: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub frame: Option<String>,
+    pub loc: String,
+    pub end: String,
 }
 
 #[derive(Debug)]
@@ -858,10 +855,11 @@ mod tests {
 
         // Test data points
         let point = &frame.data_points[0];
-        assert_eq!(point.cik, 320193);
-        assert_eq!(point.entity_name, "Apple Inc.");
-        assert!(point.val.is_number());
-        assert_eq!(point.form, "10-Q");
-        assert!(point.frame.is_some());
+        assert_eq!(point.cik, 1750);
+        assert_eq!(point.entity_name, "AAR CORP.");
+        assert_eq!(point.loc, "US-IL");
+        assert_eq!(point.val, 218600000);
+        assert_eq!(point.accn, "0001104659-19-016320");
+        assert_eq!(point.end, "2019-02-28");
     }
 }
