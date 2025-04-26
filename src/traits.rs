@@ -65,6 +65,12 @@ pub trait FilingOperations {
         cik: &str,
         opts: Option<FilingOptions>,
     ) -> Result<Vec<(DetailedFiling, String, String)>>;
+    /// Generates URLs for SGML header files with original SEC.gov links based on specified options without downloading content
+    async fn get_sgml_header_links(
+        &self,
+        cik: &str,
+        opts: Option<FilingOptions>,
+    ) -> Result<Vec<(DetailedFiling, String, String)>>;
 }
 
 /// Operations related to EDGAR feed data retrieval.

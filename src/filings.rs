@@ -199,6 +199,7 @@ enum UrlType {
     FilingContent,
     TextFiling,
     OriginalFiling,
+    SgmlHeader,
 }
 
 impl Edgar {
@@ -252,6 +253,15 @@ impl Edgar {
                     self.edgar_archives_url, cik, formatted_acc, acc_no
                 ))
             }
+            UrlType::SgmlHeader => {
+                // For SGML headers: format is /Archives/edgar/data/CIK/ACC_NO_NO_DASHES/ACC_NO_WITH_DASHES.hdr.sgml
+                let (cik, acc_no) = (params[0], params[1]);
+                let formatted_acc = acc_no.replace("-", "");
+                Ok(format!(
+                    "{}/data/{}/{}/{}.hdr.sgml",
+                    self.edgar_archives_url, cik, formatted_acc, acc_no
+                ))
+            }
         }
     }
 
@@ -267,6 +277,11 @@ impl Edgar {
     // Add a convenience method to get original filing URL directly
     fn get_original_filing_url(&self, cik: &str, accession_number: &str) -> Result<String> {
         self.build_url(UrlType::OriginalFiling, &[cik, accession_number])
+    }
+
+    // Add a convenience method to get SGML header URL directly
+    fn get_sgml_header_url(&self, cik: &str, accession_number: &str) -> Result<String> {
+        self.build_url(UrlType::SgmlHeader, &[cik, accession_number])
     }
 }
 
@@ -580,6 +595,43 @@ impl FilingOperations for Edgar {
 
         Ok(links)
     }
+
+    /// Generates URLs for SGML header files with original SEC.gov links based on specified options
+    /// without downloading content
+    ///
+    /// This function fetches filings metadata for a company identified by its CIK,
+    /// filters them based on the provided options, and then generates URLs for accessing
+    /// the SGML header files of these filings.
+    ///
+    /// # Parameters
+    ///
+    /// * `cik` - A string slice containing the Central Index Key (CIK) of the company
+    /// * `opts` - An optional `FilingOptions` struct that specifies filtering criteria
+    ///
+    /// # Returns
+    ///
+    /// Returns a `Result` containing a vector of tuples with (DetailedFiling, sgml_header_url, sec_gov_url).
+    /// If an error occurs during the process, it returns an `Err` variant.
+    async fn get_sgml_header_links(
+        &self,
+        cik: &str,
+        opts: Option<FilingOptions>,
+    ) -> Result<Vec<(DetailedFiling, String, String)>> {
+        let filings = self.filings(cik, opts).await?;
+
+        let mut links = Vec::new();
+        for filing in filings {
+            // Get SGML header URL (for downloading header content)
+            let sgml_url = self.get_sgml_header_url(cik, &filing.accession_number)?;
+
+            // Get original SEC.gov URL (for web browsing)
+            let sec_gov_url = self.get_original_filing_url(cik, &filing.accession_number)?;
+
+            links.push((filing, sgml_url, sec_gov_url));
+        }
+
+        Ok(links)
+    }
 }
 
 #[cfg(test)]
@@ -757,6 +809,64 @@ mod tests {
             url, expected_url,
             "Text filing URL format doesn't match expected pattern"
         );
+    }
+
+    #[tokio::test]
+    async fn test_sgml_header_url_format() {
+        // Create Edgar instance
+        let edgar = Edgar::new("test_agent example@example.com").unwrap();
+
+        // Test specific URL pattern with well-known CIK and accession number
+        let cik = "1889983"; // Example CIK
+        let accession_number = "0001213900-23-009668"; // Example accession number
+
+        let url = edgar.get_sgml_header_url(cik, accession_number).unwrap();
+
+        // Expected URL pattern
+        let formatted_acc = accession_number.replace("-", "");
+        let expected_url = format!(
+            "{}/data/{}/{}/{}.hdr.sgml",
+            edgar.edgar_archives_url, cik, formatted_acc, accession_number
+        );
+
+        assert_eq!(url, expected_url);
+    }
+
+    #[tokio::test]
+    async fn test_get_sgml_header_links() {
+        // Create Edgar instance
+        let edgar = Edgar::new("test_agent example@example.com").unwrap();
+
+        // Test with Apple Inc. CIK and limit to 3 filings
+        let opts = FilingOptions::new().with_limit(3);
+        let filing_links = edgar
+            .get_sgml_header_links("320193", Some(opts))
+            .await
+            .unwrap();
+
+        // Verify we got the right number of links
+        assert_eq!(
+            filing_links.len(),
+            3,
+            "Should return exactly 3 filing links"
+        );
+
+        // Verify each link is properly formatted for SGML headers
+        for (filing, url, _) in &filing_links {
+            // URL should contain the .hdr.sgml extension
+            assert!(url.ends_with(".hdr.sgml"), "URL should end with .hdr.sgml");
+
+            // Verify format: {base}/data/{cik}/{acc_no_without_dashes}/{acc_no_with_dashes}.hdr.sgml
+            let formatted_acc = filing.accession_number.replace("-", "");
+            assert!(
+                url.contains(&formatted_acc),
+                "URL should contain the accession number without dashes"
+            );
+            assert!(
+                url.contains(&filing.accession_number),
+                "URL should contain the original accession number"
+            );
+        }
     }
 
     #[tokio::test]
