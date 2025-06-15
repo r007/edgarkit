@@ -267,50 +267,111 @@ impl Edgar {
             // Wait for rate limiter
             self.rate_limiter.until_ready().await;
 
-            let response = self
-                .client
-                .get(url)
-                .send()
-                .await
-                .map_err(EdgarError::RequestError)?;
+            let response_result = self.client.get(url).send().await;
 
-            match response.status() {
-                reqwest::StatusCode::OK => {
-                    return response.text().await.map_err(EdgarError::RequestError);
-                }
-                reqwest::StatusCode::NOT_FOUND => {
-                    return Err(EdgarError::NotFound);
-                }
-                reqwest::StatusCode::TOO_MANY_REQUESTS => {
-                    if retries >= MAX_RETRIES {
-                        return Err(EdgarError::RateLimitExceeded);
+            match response_result {
+                Ok(response) => {
+                    let status = response.status();
+                    let headers = response.headers().clone(); // Clone headers for inspection
+
+                    match status {
+                        reqwest::StatusCode::OK => {
+                            let content_type_header_val = headers
+                                .get(reqwest::header::CONTENT_TYPE)
+                                .and_then(|val| val.to_str().ok());
+
+                            // Heuristic: if URL ends with .json, we expect JSON.
+                            if url.ends_with(".json") {
+                                if let Some(ct) = content_type_header_val {
+                                    if ct.to_lowercase().contains("text/html") {
+                                        let body_preview = response
+                                            .text()
+                                            .await
+                                            .unwrap_or_else(|_| {
+                                                "Failed to read HTML body".to_string()
+                                            })
+                                            .chars()
+                                            .take(200)
+                                            .collect::<String>();
+
+                                        return Err(EdgarError::UnexpectedContentType {
+                                            url: url.to_string(),
+                                            expected_pattern: "application/json".to_string(),
+                                            got_content_type: ct.to_string(),
+                                            content_preview: Some(body_preview),
+                                        });
+                                    }
+                                }
+                                // If content type is not HTML, or not present, proceed.
+                                // The actual JSON parsing will happen by the caller.
+                            }
+                            // For non-.json URLs or if content type check passed, return text.
+                            return response.text().await.map_err(EdgarError::RequestError);
+                        }
+                        reqwest::StatusCode::NOT_FOUND => {
+                            // No specific warning here, NotFound error is explicit.
+                            return Err(EdgarError::NotFound);
+                        }
+                        reqwest::StatusCode::TOO_MANY_REQUESTS => {
+                            if retries >= MAX_RETRIES {
+                                // No tracing::error! here, error is propagated.
+                                return Err(EdgarError::RateLimitExceeded);
+                            }
+
+                            // Get retry-after header if available
+                            let retry_after_duration = headers
+                                .get("retry-after")
+                                .and_then(|h| h.to_str().ok())
+                                .and_then(|s| s.parse::<u64>().ok())
+                                .map(Duration::from_secs)
+                                .unwrap_or_else(|| Self::calculate_backoff(retries));
+
+                            tracing::warn!(
+                                "Rate limit hit (429) for {}. Attempt {}/{}. Waiting for {:?} before retry.",
+                                url,
+                                retries + 1,
+                                MAX_RETRIES + 1, // Display as 1/6, 2/6, ..., 6/6 for MAX_RETRIES = 5
+                                retry_after_duration
+                            );
+
+                            sleep(retry_after_duration).await;
+                            retries += 1;
+                            // continue loop
+                        }
+                        other_status => {
+                            let error_body = response
+                                .text()
+                                .await
+                                .unwrap_or_else(|_| "Failed to read error body".to_string());
+
+                            // No tracing::error! here, error is propagated with details.
+                            return Err(EdgarError::InvalidResponse(format!(
+                                "Unexpected status code: {} for URL: {}. Response preview: {}",
+                                other_status,
+                                url,
+                                error_body.chars().take(200).collect::<String>()
+                            )));
+                        }
                     }
-
-                    // Get retry-after header if available
-                    let retry_after = response
-                        .headers()
-                        .get("retry-after")
-                        .and_then(|h| h.to_str().ok())
-                        .and_then(|s| s.parse::<u64>().ok())
-                        .map(Duration::from_secs)
-                        .unwrap_or_else(|| Self::calculate_backoff(retries));
-
-                    tracing::warn!(
-                        "Rate limit exceeded, attempt {}/{}. Waiting for {:?} before retry",
-                        retries + 1,
-                        MAX_RETRIES,
-                        retry_after
-                    );
-
-                    sleep(retry_after).await;
-                    retries += 1;
-                    continue;
                 }
-                status => {
-                    return Err(EdgarError::InvalidResponse(format!(
-                        "Unexpected status code: {}",
-                        status
-                    )));
+                Err(e) => {
+                    // Network or other reqwest error before getting a response status
+                    if retries >= MAX_RETRIES {
+                        // No tracing::error! here, error is propagated.
+                        return Err(EdgarError::RequestError(e));
+                    }
+                    let backoff_duration = Self::calculate_backoff(retries);
+                    tracing::warn!(
+                        "Request failed for {}: {:?}. Attempt {}/{}. Retrying in {:?}.",
+                        url,
+                        e,
+                        retries + 1,
+                        MAX_RETRIES + 1, // Display as 1/6, 2/6, ..., 6/6 for MAX_RETRIES = 5
+                        backoff_duration
+                    );
+                    sleep(backoff_duration).await;
+                    retries += 1;
+                    // continue loop
                 }
             }
         }

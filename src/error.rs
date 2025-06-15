@@ -51,6 +51,16 @@ pub enum EdgarError {
 
     #[error("UTF-8 conversion error: {0}")]
     Utf8Error(#[from] FromUtf8Error),
+
+    #[error(
+        "Unexpected content type from URL {url}. Expected pattern {expected_pattern}, but got Content-Type: {got_content_type}."
+    )]
+    UnexpectedContentType {
+        url: String,
+        expected_pattern: String, // e.g., "application/json"
+        got_content_type: String,
+        content_preview: Option<String>, // Optionally add a preview of the content
+    },
 }
 
 impl From<quick_xml::DeError> for EdgarError {
