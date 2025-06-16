@@ -253,13 +253,38 @@ impl Edgar {
     /// Returns various `EdgarError` variants depending on the failure:
     /// - `RequestError` for network/HTTP errors
     /// - `NotFound` for 404 responses
-    /// - `RateLimitExceeded` after maximum retries
-    /// - `InvalidResponse` for unexpected status codes
+    /// - `RateLimitExceeded` after maximum retries for rate limiting
+    /// - `InvalidResponse` for unexpected status codes with response preview
+    /// - `UnexpectedContentType` when a JSON endpoint returns HTML content
+    ///
+    /// # Content Type Validation
+    ///
+    /// For URLs ending with ".json", this method validates that the response
+    /// Content-Type is not "text/html". If HTML is detected (regardless of HTTP
+    /// status code), it returns `UnexpectedContentType` with a preview of the
+    /// HTML content. This prevents downstream JSON parsing errors when servers
+    /// return HTML error pages instead of expected JSON responses.
     ///
     /// # Rate Limiting
     ///
     /// Implements a token bucket algorithm for rate limiting and exponential
-    /// backoff with jitter for rate limit responses (HTTP 429).
+    /// backoff with jitter for rate limit responses (HTTP 429). The method
+    /// respects "retry-after" headers when present, falling back to calculated
+    /// exponential backoff otherwise.
+    ///
+    /// # Retry Logic
+    ///
+    /// - Rate limit errors (429): Retries up to `MAX_RETRIES` times with backoff
+    /// - Network errors: Retries up to `MAX_RETRIES` times with backoff
+    /// - Other HTTP errors: No retry, immediate error return
+    /// - Content type mismatches: No retry, immediate error return
+    ///
+    /// # Logging
+    ///
+    /// Logs warnings for:
+    /// - Rate limit retries with attempt count and wait duration
+    /// - Network error retries with error details and attempt count
+    /// - Content type mismatches with response preview
     pub async fn get(&self, url: &str) -> Result<String> {
         let mut retries = 0;
 
@@ -272,49 +297,49 @@ impl Edgar {
             match response_result {
                 Ok(response) => {
                     let status = response.status();
-                    let headers = response.headers().clone(); // Clone headers for inspection
+                    let headers = response.headers().clone();
 
+                    // **Primary Check: If JSON was expected but HTML is received (regardless of status for client/server errors)**
+                    if url.ends_with(".json") {
+                        if let Some(ct) = headers
+                            .get(reqwest::header::CONTENT_TYPE)
+                            .and_then(|val| val.to_str().ok())
+                        {
+                            if ct.to_lowercase().contains("text/html") {
+                                // Even if status is not 200 OK, if it's HTML for a .json URL, it's unexpected.
+                                let body_preview = response
+                                    .text()
+                                    .await
+                                    .unwrap_or_else(|_| "Failed to read HTML body".to_string())
+                                    .chars()
+                                    .take(200)
+                                    .collect::<String>();
+
+                                return Err(EdgarError::UnexpectedContentType {
+                                    url: url.to_string(),
+                                    expected_pattern: "application/json".to_string(),
+                                    got_content_type: ct.to_string(),
+                                    content_preview: body_preview,
+                                });
+                            }
+                        }
+                        // If content-type wasn't text/html, or header was missing, proceed to normal status handling.
+                        // This means if it's a non-200 status but the content might be a valid JSON error (e.g., from SEC API),
+                        // it will be handled by the match status block below.
+                    }
+
+                    // **Standard Status Handling**
                     match status {
                         reqwest::StatusCode::OK => {
-                            let content_type_header_val = headers
-                                .get(reqwest::header::CONTENT_TYPE)
-                                .and_then(|val| val.to_str().ok());
-
-                            // Heuristic: if URL ends with .json, we expect JSON.
-                            if url.ends_with(".json") {
-                                if let Some(ct) = content_type_header_val {
-                                    if ct.to_lowercase().contains("text/html") {
-                                        let body_preview = response
-                                            .text()
-                                            .await
-                                            .unwrap_or_else(|_| {
-                                                "Failed to read HTML body".to_string()
-                                            })
-                                            .chars()
-                                            .take(200)
-                                            .collect::<String>();
-
-                                        return Err(EdgarError::UnexpectedContentType {
-                                            url: url.to_string(),
-                                            expected_pattern: "application/json".to_string(),
-                                            got_content_type: ct.to_string(),
-                                            content_preview: Some(body_preview),
-                                        });
-                                    }
-                                }
-                                // If content type is not HTML, or not present, proceed.
-                                // The actual JSON parsing will happen by the caller.
-                            }
-                            // For non-.json URLs or if content type check passed, return text.
+                            // If it's a .json URL, the check above ensures Content-Type wasn't text/html.
+                            // If it's not a .json URL, we just get the text.
                             return response.text().await.map_err(EdgarError::RequestError);
                         }
                         reqwest::StatusCode::NOT_FOUND => {
-                            // No specific warning here, NotFound error is explicit.
                             return Err(EdgarError::NotFound);
                         }
                         reqwest::StatusCode::TOO_MANY_REQUESTS => {
                             if retries >= MAX_RETRIES {
-                                // No tracing::error! here, error is propagated.
                                 return Err(EdgarError::RateLimitExceeded);
                             }
 
@@ -333,18 +358,19 @@ impl Edgar {
                                 MAX_RETRIES + 1, // Display as 1/6, 2/6, ..., 6/6 for MAX_RETRIES = 5
                                 retry_after_duration
                             );
-
                             sleep(retry_after_duration).await;
                             retries += 1;
-                            // continue loop
+                            continue; // Retry the loop
                         }
                         other_status => {
+                            // Handles other statuses like 403, 500, 503 etc.
+                            // If we reached here for a .json URL, it means the Content-Type wasn't text/html (or was missing).
+                            // The body might be a JSON-formatted error from SEC, or some other non-HTML error page.
                             let error_body = response
                                 .text()
                                 .await
                                 .unwrap_or_else(|_| "Failed to read error body".to_string());
 
-                            // No tracing::error! here, error is propagated with details.
                             return Err(EdgarError::InvalidResponse(format!(
                                 "Unexpected status code: {} for URL: {}. Response preview: {}",
                                 other_status,
@@ -357,7 +383,6 @@ impl Edgar {
                 Err(e) => {
                     // Network or other reqwest error before getting a response status
                     if retries >= MAX_RETRIES {
-                        // No tracing::error! here, error is propagated.
                         return Err(EdgarError::RequestError(e));
                     }
                     let backoff_duration = Self::calculate_backoff(retries);
@@ -371,7 +396,7 @@ impl Edgar {
                     );
                     sleep(backoff_duration).await;
                     retries += 1;
-                    // continue loop
+                    continue; // Retry the loop
                 }
             }
         }

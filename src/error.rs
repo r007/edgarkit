@@ -53,13 +53,13 @@ pub enum EdgarError {
     Utf8Error(#[from] FromUtf8Error),
 
     #[error(
-        "Unexpected content type from URL {url}. Expected pattern {expected_pattern}, but got Content-Type: {got_content_type}."
+        "Unexpected content type from URL {url}. Expected pattern {expected_pattern}, but got Content-Type: {got_content_type}. Content preview: {content_preview}..."
     )]
     UnexpectedContentType {
         url: String,
         expected_pattern: String, // e.g., "application/json"
         got_content_type: String,
-        content_preview: Option<String>, // Optionally add a preview of the content
+        content_preview: String, // Add a preview of the content
     },
 }
 
