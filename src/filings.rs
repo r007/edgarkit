@@ -21,7 +21,7 @@ pub struct Submission {
     pub insider_transaction_for_issuer_exists: i32,
     pub name: String,
     pub tickers: Vec<String>,
-    pub exchanges: Vec<String>,
+    pub exchanges: Vec<Option<String>>,
     pub ein: Option<String>,
     pub description: Option<String>,
     pub website: Option<String>,
@@ -29,7 +29,7 @@ pub struct Submission {
     pub investment_company: Option<String>,
     pub category: Option<String>,
     #[serde(rename = "fiscalYearEnd")]
-    pub fiscal_year_end: String,
+    pub fiscal_year_end: Option<String>,
     #[serde(rename = "stateOfIncorporation")]
     pub state_of_incorporation: String,
     #[serde(rename = "stateOfIncorporationDescription")]
@@ -82,7 +82,7 @@ pub struct FilingFile {
     #[serde(rename = "filingFrom")]
     pub filing_from: String,
     #[serde(rename = "filingTo")]
-    pub filint_to: String,
+    pub filing_to: String,
 }
 
 #[derive(Debug, Clone, Deserialize)]
