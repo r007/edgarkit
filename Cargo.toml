@@ -3,21 +3,29 @@ name = "edgar"
 version = "0.1.0"
 edition = "2024"
 
+[features]
+default = ["search", "filings", "company", "feeds", "index"]
+search = ["dep:serde_urlencoded", "dep:futures"]
+filings = ["dep:flate2", "dep:chrono", "dep:parsers"]
+company = ["dep:chrono"]
+feeds = ["dep:parsers", "dep:quick-xml"]
+index = ["dep:flate2", "dep:chrono", "dep:parsers", "dep:regex"]
+
 [dependencies]
 # Internal dependencies
-parsers = { path = "../parsers" }
+parsers = { path = "../parsers", optional = true }
 
 # Serialization
 serde = { workspace = true }
 serde_json = { workspace = true }
-serde_urlencoded = { workspace = true }
-quick-xml = { workspace = true }
+serde_urlencoded = { workspace = true, optional = true }
+quick-xml = { workspace = true, optional = true }
 
 # HTTP & Async
 reqwest = { workspace = true }
 tokio = { workspace = true }
 async-trait = { workspace = true }
-futures = { workspace = true }
+futures = { workspace = true, optional = true }
 governor = { workspace = true }
 
 # Error handling
@@ -25,7 +33,7 @@ thiserror = { workspace = true }
 tracing = { workspace = true }
 
 # Utilities
-regex = { workspace = true }
-chrono = { workspace = true }
+regex = { workspace = true, optional = true }
+chrono = { workspace = true, optional = true }
 fastrand = { workspace = true }
-flate2 = { workspace = true }
+flate2 = { workspace = true, optional = true }

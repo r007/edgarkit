@@ -1,14 +1,22 @@
+#[cfg(feature = "company")]
 use super::company::{
     CompanyConcept, CompanyFacts, CompanyTicker, CompanyTickerExchange, Frame, MutualFundTicker,
 };
 use super::error::Result;
+#[cfg(feature = "filings")]
 use super::filings::{DetailedFiling, DirectoryResponse, Submission};
+#[cfg(feature = "index")]
 use super::index::{EdgarDay, EdgarPeriod, IndexResponse};
+#[cfg(any(feature = "filings", feature = "index", feature = "feeds"))]
 use super::options::{FeedOptions, FilingOptions};
+#[cfg(feature = "search")]
 use super::search::{Hit, SearchOptions, SearchResponse};
 use async_trait::async_trait;
+#[cfg(any(feature = "filings", feature = "index", feature = "feeds"))]
 use parsers::atom::AtomDocument;
+#[cfg(any(feature = "filings", feature = "index", feature = "feeds"))]
 use parsers::index::IndexEntry;
+#[cfg(any(feature = "filings", feature = "index", feature = "feeds"))]
 use parsers::rss::RssDocument;
 
 /// A collection of trait definitions for interacting with the SEC EDGAR system.
@@ -16,6 +24,7 @@ use parsers::rss::RssDocument;
 /// various types of financial data and documents from the SEC EDGAR database.
 
 /// Operations related to company information retrieval from EDGAR.
+#[cfg(feature = "company")]
 #[async_trait]
 pub trait CompanyOperations {
     /// Retrieves a list of all company tickers from EDGAR.
@@ -37,6 +46,7 @@ pub trait CompanyOperations {
 }
 
 /// Operations related to SEC filing retrieval and management.
+#[cfg(feature = "filings")]
 #[async_trait]
 pub trait FilingOperations {
     /// Retrieves all submissions for a specific company identified by CIK.
@@ -74,6 +84,7 @@ pub trait FilingOperations {
 }
 
 /// Operations related to EDGAR feed data retrieval.
+#[cfg(feature = "feeds")]
 #[async_trait]
 pub trait FeedOperations {
     /// Retrieves the current EDGAR feed with optional parameters.
@@ -123,6 +134,7 @@ pub trait FeedOperations {
 }
 
 /// Operations for retrieving EDGAR index files.
+#[cfg(feature = "index")]
 #[async_trait]
 pub trait IndexOperations {
     /// Retrieves the full index file for a specific year and quarter.
@@ -143,6 +155,7 @@ pub trait IndexOperations {
     ) -> Result<Vec<IndexEntry>>;
 }
 
+#[cfg(feature = "search")]
 #[async_trait]
 pub trait SearchOperations {
     /// Performs a search query on EDGAR

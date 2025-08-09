@@ -2,6 +2,7 @@ use serde::Serialize;
 use std::collections::HashMap;
 
 /// Options for filtering filing requests
+#[cfg(any(feature = "filings", feature = "index"))]
 #[derive(Debug, Clone, Default)]
 pub struct FilingOptions {
     pub form_types: Option<Vec<String>>,
@@ -10,6 +11,7 @@ pub struct FilingOptions {
     pub ciks: Option<Vec<u64>>,
 }
 
+#[cfg(any(feature = "filings", feature = "index"))]
 impl FilingOptions {
     pub fn new() -> Self {
         Self::default()
@@ -48,12 +50,14 @@ impl FilingOptions {
 }
 
 /// Options for feed requests
+#[cfg(feature = "feeds")]
 #[derive(Debug, Clone, Default, Serialize)]
 pub struct FeedOptions {
     #[serde(flatten)]
     params: HashMap<String, String>,
 }
 
+#[cfg(feature = "feeds")]
 impl FeedOptions {
     fn default() -> Self {
         let mut options = FeedOptions {

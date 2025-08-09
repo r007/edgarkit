@@ -1,3 +1,4 @@
+#[cfg(any(feature = "filings", feature = "index", feature = "feeds"))]
 use parsers::error::ParserError;
 use std::string::FromUtf8Error;
 use thiserror::Error;
@@ -46,6 +47,7 @@ pub enum EdgarError {
     #[error("Configuration error: {0}")]
     ConfigError(String),
 
+    #[cfg(any(feature = "filings", feature = "index", feature = "feeds"))]
     #[error("Parser error: {0}")]
     ParserError(#[from] ParserError),
 
@@ -63,6 +65,7 @@ pub enum EdgarError {
     },
 }
 
+#[cfg(feature = "feeds")]
 impl From<quick_xml::DeError> for EdgarError {
     fn from(error: quick_xml::DeError) -> Self {
         EdgarError::XmlError(error.to_string())

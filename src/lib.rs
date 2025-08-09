@@ -37,33 +37,69 @@
 //! }
 //! ```
 
-// Public modules
-mod company;
 mod config;
 mod core;
 mod error;
-mod feeds;
-mod filings;
-mod index;
+
+// Conditionally include modules
+#[cfg(any(feature = "filings", feature = "index", feature = "feeds"))]
 mod options;
-mod search;
+
+#[cfg(any(
+    feature = "company",
+    feature = "filings",
+    feature = "feeds",
+    feature = "index",
+    feature = "search"
+))]
 mod traits;
 
-// Re-export core types and traits for a clean API
-pub use company::{
-    CompanyConcept, CompanyFacts, CompanyTicker, CompanyTickerExchange, Frame, MutualFundTicker,
-};
+// Public modules
+#[cfg(feature = "company")]
+mod company;
+#[cfg(feature = "feeds")]
+mod feeds;
+#[cfg(feature = "filings")]
+mod filings;
+#[cfg(feature = "index")]
+mod index;
+#[cfg(feature = "search")]
+mod search;
+
+// Core Edgar functionality (always available)
 pub use config::{EdgarConfig, EdgarUrls};
 pub use core::Edgar;
 pub use error::{EdgarError, Result};
-pub use filings::{DetailedFiling, Directory, DirectoryItem, DirectoryResponse, Submission};
-pub use index::{EdgarDay, EdgarPeriod, IndexResponse, Quarter};
-pub use options::{FeedOptions, FilingOptions};
-pub use search::{Hit, Hits, SearchOptions, SearchResponse, TotalHits};
-pub use traits::{
-    CompanyOperations, FeedOperations, FilingOperations, IndexOperations, SearchOperations,
-};
 
-// Version information
+// Conditionally export options
+#[cfg(feature = "feeds")]
+pub use options::FeedOptions;
+#[cfg(any(feature = "filings", feature = "index"))]
+pub use options::FilingOptions;
+
+// Re-export core types and traits for a clean API
+#[cfg(feature = "company")]
+pub use company::{
+    CompanyConcept, CompanyFacts, CompanyTicker, CompanyTickerExchange, Frame, MutualFundTicker,
+};
+#[cfg(feature = "filings")]
+pub use filings::{DetailedFiling, Directory, DirectoryItem, DirectoryResponse, Submission};
+#[cfg(feature = "index")]
+pub use index::{EdgarDay, EdgarPeriod, IndexResponse, Quarter};
+#[cfg(feature = "search")]
+pub use search::{Hit, Hits, SearchOptions, SearchResponse, TotalHits};
+
+// Conditionally export traits
+#[cfg(feature = "company")]
+pub use traits::CompanyOperations;
+#[cfg(feature = "feeds")]
+pub use traits::FeedOperations;
+#[cfg(feature = "filings")]
+pub use traits::FilingOperations;
+#[cfg(feature = "index")]
+pub use traits::IndexOperations;
+#[cfg(feature = "search")]
+pub use traits::SearchOperations;
+
 /// Current crate version
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
