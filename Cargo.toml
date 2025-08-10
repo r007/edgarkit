@@ -6,10 +6,10 @@ edition = "2024"
 [features]
 default = ["search", "filings", "company", "feeds", "index"]
 search = ["dep:serde_urlencoded", "dep:futures"]
-filings = ["dep:flate2", "dep:chrono", "dep:parsers"]
+filings = ["dep:flate2", "dep:chrono", "parsers/text"]
 company = ["dep:chrono"]
-feeds = ["dep:parsers", "dep:quick-xml"]
-index = ["dep:flate2", "dep:chrono", "dep:parsers", "dep:regex"]
+feeds = ["parsers/atom", "parsers/rss", "dep:quick-xml"]
+index = ["dep:flate2", "dep:chrono", "parsers/index", "dep:regex"]
 
 [dependencies]
 # Internal dependencies

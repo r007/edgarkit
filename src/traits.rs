@@ -12,11 +12,11 @@ use super::options::{FeedOptions, FilingOptions};
 #[cfg(feature = "search")]
 use super::search::{Hit, SearchOptions, SearchResponse};
 use async_trait::async_trait;
-#[cfg(any(feature = "filings", feature = "index", feature = "feeds"))]
+#[cfg(feature = "feeds")]
 use parsers::atom::AtomDocument;
-#[cfg(any(feature = "filings", feature = "index", feature = "feeds"))]
+#[cfg(feature = "index")]
 use parsers::index::IndexEntry;
-#[cfg(any(feature = "filings", feature = "index", feature = "feeds"))]
+#[cfg(feature = "feeds")]
 use parsers::rss::RssDocument;
 
 /// A collection of trait definitions for interacting with the SEC EDGAR system.
