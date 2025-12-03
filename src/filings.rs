@@ -15,6 +15,9 @@ pub struct Submission {
     pub sic: String,
     #[serde(rename = "sicDescription")]
     pub sic_description: String,
+    /// Owner organization type
+    #[serde(rename = "ownerOrg")]
+    pub owner_org: Option<String>,
     #[serde(rename = "insiderTransactionForOwnerExists")]
     pub insider_transaction_for_owner_exists: i32,
     #[serde(rename = "insiderTransactionForIssuerExists")]
@@ -23,8 +26,13 @@ pub struct Submission {
     pub tickers: Vec<String>,
     pub exchanges: Vec<Option<String>>,
     pub ein: Option<String>,
+    /// Legal Entity Identifier
+    pub lei: Option<String>,
     pub description: Option<String>,
     pub website: Option<String>,
+    /// Investor relations website
+    #[serde(rename = "investorWebsite")]
+    pub investor_website: Option<String>,
     #[serde(rename = "investmentCompany")]
     pub investment_company: Option<String>,
     pub category: Option<String>,
@@ -54,11 +62,22 @@ pub struct Address {
     pub street2: Option<String>,
     pub city: String,
     #[serde(rename = "stateOrCountry")]
-    pub state_or_country: String,
+    pub state_or_country: Option<String>,
     #[serde(rename = "zipCode")]
-    pub zip_code: String,
+    pub zip_code: Option<String>,
     #[serde(rename = "stateOrCountryDescription")]
-    pub state_or_country_description: String,
+    pub state_or_country_description: Option<String>,
+    /// For foreign addresses
+    #[serde(rename = "isForeignLocation")]
+    pub is_foreign_location: Option<i32>,
+    /// For foreign addresses
+    #[serde(rename = "foreignStateTerritory")]
+    pub foreign_state_territory: Option<String>,
+    /// Country name for foreign addresses
+    pub country: Option<String>,
+    /// Country code for foreign addresses
+    #[serde(rename = "countryCode")]
+    pub country_code: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
