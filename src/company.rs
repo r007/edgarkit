@@ -62,8 +62,10 @@ pub struct DataPoint {
     pub end: String,
     pub val: serde_json::Value, // Can be number or string
     pub accn: String,
-    pub fy: i32,
-    pub fp: String,
+    #[serde(default)]
+    pub fy: Option<i32>,
+    #[serde(default)]
+    pub fp: Option<String>,
     pub form: String,
     pub filed: String,
     #[serde(skip_serializing_if = "Option::is_none")]
