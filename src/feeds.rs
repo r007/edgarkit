@@ -139,21 +139,9 @@ impl FeedOperations for Edgar {
             .await
     }
 
-    /// Fetches the litigation feed
-    async fn litigation_feed(&self) -> Result<RssDocument> {
-        self.get_rss_feed("https://www.sec.gov/rss/litigation/litreleases.xml")
-            .await
-    }
-
     /// Fetches the administrative proceedings feed
     async fn administrative_proceedings_feed(&self) -> Result<RssDocument> {
         self.get_rss_feed("https://www.sec.gov/rss/litigation/admin.xml")
-            .await
-    }
-
-    /// Fetches the trading suspensions feed
-    async fn trading_suspensions_feed(&self) -> Result<RssDocument> {
-        self.get_rss_feed("https://www.sec.gov/rss/litigation/suspensions.xml")
             .await
     }
 

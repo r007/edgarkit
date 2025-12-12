@@ -109,12 +109,8 @@ pub trait FeedOperations {
     async fn statements_feed(&self) -> Result<RssDocument>;
     /// Fetches the testimony feed
     async fn testimony_feed(&self) -> Result<RssDocument>;
-    /// Fetches the litigation feed
-    async fn litigation_feed(&self) -> Result<RssDocument>;
     /// Fetches the administrative proceedings feed
     async fn administrative_proceedings_feed(&self) -> Result<RssDocument>;
-    /// Fetches the trading suspensions feed
-    async fn trading_suspensions_feed(&self) -> Result<RssDocument>;
     /// Fetches the division of corporation finance feed
     async fn division_of_corporation_finance_feed(&self) -> Result<RssDocument>;
     /// Fetches the division of investment management feed
