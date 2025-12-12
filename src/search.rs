@@ -519,22 +519,32 @@ impl SearchOperations for Edgar {
         let mut all_hits = Vec::with_capacity(total_hits as usize);
         all_hits.extend(initial_response.hits.hits);
 
+        let total_pages = (total_hits + PAGE_SIZE - 1) / PAGE_SIZE;
         let mut current_page = 1;
-        while current_page * PAGE_SIZE < total_hits {
-            let mut batch_futures = Vec::with_capacity(BATCH_SIZE as usize);
 
-            for page in (current_page + 1)
-                ..=(current_page + BATCH_SIZE).min((total_hits + PAGE_SIZE - 1) / PAGE_SIZE)
-            {
-                let skip = ((page - 1) * PAGE_SIZE).min(total_hits - 1);
+        while current_page < total_pages {
+            let end_page = (current_page + BATCH_SIZE).min(total_pages);
+            let mut batch_futures = Vec::with_capacity((end_page - current_page) as usize);
+
+            for page in (current_page + 1)..=end_page {
+                let skip = (page - 1) * PAGE_SIZE;
+
+                // Stop if we've gone past the total hits
+                if skip >= total_hits {
+                    break;
+                }
 
                 let mut page_options = options.clone();
                 page_options.page = Some(page);
                 page_options.from = Some(skip);
-                page_options.count = Some(PAGE_SIZE);
+                page_options.count = Some(PAGE_SIZE.min(total_hits - skip));
                 page_options.reverse_order = Some(false);
 
                 batch_futures.push(self.search(page_options));
+            }
+
+            if batch_futures.is_empty() {
+                break;
             }
 
             let results = futures::future::join_all(batch_futures).await;
@@ -546,6 +556,7 @@ impl SearchOperations for Edgar {
                     }
                     Err(e) => {
                         tracing::error!("Error fetching page: {}", e);
+                        return Err(e);
                     }
                 }
             }
