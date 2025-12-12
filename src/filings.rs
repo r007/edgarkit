@@ -404,24 +404,38 @@ impl FilingOperations for Edgar {
         Ok(detailed_filings)
     }
 
-    /// Retrieves and filters filings for a given company based on specified options.
+    /// Gets filings for a company, with optional filtering by form type, offset, and limit.
     ///
-    /// This function fetches all recent filings for a company identified by its CIK,
-    /// and then applies optional filters such as form type, offset, and limit.
+    /// By default, when you request a specific form type like "S-1", this automatically includes
+    /// amendments too ("S-1/A") so you get the complete picture. You can disable this with
+    /// `with_include_amendments(false)`. The filings are already sorted by date with newest first.
     ///
     /// # Parameters
     ///
-    /// * `cik` - A string slice containing the Central Index Key (CIK) of the company.
-    /// * `opts` - An optional `FilingOptions` struct that specifies filtering criteria:
-    ///   - `form_types`: If provided, only filings of these types will be returned.
-    ///   - `offset`: If provided, skips this many filings from the start of the list.
-    ///   - `limit`: If provided, returns at most this many filings.
+    /// * `cik` - The company's Central Index Key
+    /// * `opts` - Optional filters:
+    ///   - `form_types`: Which form types to include
+    ///   - `include_amendments`: Whether to add amendment forms automatically (default: true)
+    ///   - `offset`: Skip this many filings from the start
+    ///   - `limit`: Return at most this many filings
     ///
     /// # Returns
     ///
-    /// Returns a `Result` containing a vector of `DetailedFiling` structs if successful.
-    /// The vector represents the filtered list of filings based on the provided options.
-    /// If an error occurs during the process, it returns an `Err` variant.
+    /// A list of filings matching your criteria, sorted with newest first.
+    ///
+    /// # Examples
+    ///
+    /// ```ignore
+    /// // This returns both S-1 and S-1/A filings (default behavior)
+    /// let opts = FilingOptions::new().with_form_type("S-1");
+    /// let filings = edgar.filings("320193", Some(opts)).await?;
+    ///
+    /// // This returns only S-1 filings, excluding amendments
+    /// let opts = FilingOptions::new()
+    ///     .with_form_type("S-1")
+    ///     .with_include_amendments(false);
+    /// let filings = edgar.filings("320193", Some(opts)).await?;
+    /// ```
     async fn filings(&self, cik: &str, opts: Option<FilingOptions>) -> Result<Vec<DetailedFiling>> {
         let mut all_filings = self.get_recent_filings(cik).await?;
 
@@ -429,7 +443,19 @@ impl FilingOperations for Edgar {
         if let Some(opts) = opts {
             // Filter by form types if specified
             if let Some(ref form_types) = opts.form_types {
-                all_filings.retain(|filing| form_types.iter().any(|ft| ft == &filing.form.trim()));
+                let mut expanded_types = form_types.clone();
+
+                // Add amendment forms if include_amendments is true (default)
+                if opts.include_amendments {
+                    for form_type in form_types {
+                        if !form_type.ends_with("/A") {
+                            expanded_types.push(format!("{}/A", form_type));
+                        }
+                    }
+                }
+
+                all_filings
+                    .retain(|filing| expanded_types.iter().any(|ft| ft == &filing.form.trim()));
             }
 
             // Apply offset
@@ -542,38 +568,48 @@ impl FilingOperations for Edgar {
         self.get(&url).await
     }
 
-    /// Retrieves the content of the latest filing of a specified type for a given company.
+    /// Downloads the content of the most recent filing of a specific type.
     ///
-    /// This function fetches the most recent filing of the specified form type for the company
-    /// identified by the given CIK. It then retrieves and returns the content of that filing.
+    /// This gets you the actual document content, not just metadata. By default, when you ask for
+    /// a form type like "10-K", it includes amendments ("10-K/A") automatically and returns the
+    /// most recent one - which could be either the original or an amendment.
     ///
     /// # Parameters
     ///
-    /// * `cik` - A string slice containing the Central Index Key (CIK) of the company.
-    /// * `form_type` - A string slice specifying the type of form to retrieve (e.g., "10-K", "10-Q").
+    /// * `cik` - The company's Central Index Key
+    /// * `form_type` - The form type you want (e.g., "10-K", "S-1")
     ///
     /// # Returns
     ///
-    /// Returns a `Result` containing a `String` with the content of the latest filing if successful.
-    /// If an error occurs during the process, it returns an `Err` variant.
+    /// The filing content as a string (usually HTML or XML).
     ///
     /// # Errors
     ///
-    /// This function will return an error if:
-    /// * No filings of the specified type are found for the given CIK.
-    /// * The retrieved filing does not have a primary document.
-    /// * There's an issue constructing the URL for the filing.
-    /// * There's a problem fetching the content of the filing.
+    /// Returns an error if:
+    /// * No filings of that type exist for this company
+    /// * The filing doesn't have a primary document
+    /// * There's a network issue downloading the content
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// // Gets the latest 10-K or 10-K/A filing
+    /// let content = edgar.get_latest_filing_content("320193", "10-K").await?;
+    /// println!("Downloaded {} bytes", content.len());
+    /// ```
     async fn get_latest_filing_content(&self, cik: &str, form_type: &str) -> Result<String> {
-        let opts = FilingOptions::new()
-            .with_form_type(form_type.to_string())
-            .with_limit(1);
+        let opts = FilingOptions::new().with_form_type(form_type.to_string());
         let filings = self.filings(cik, Some(opts)).await?;
-        let filing = filings.first().ok_or_else(|| EdgarError::NotFound)?;
+
+        // Get the first filing - it's already the most recent since filings() returns them sorted
+        // and includes amendments automatically
+        let filing = filings.first().ok_or(EdgarError::NotFound)?;
+
         let primary_doc = filing
             .primary_document
             .as_ref()
             .ok_or_else(|| EdgarError::InvalidResponse("No primary document found".to_string()))?;
+
         let url = self.get_filing_url(cik, &filing.accession_number, primary_doc)?;
         self.get(&url).await
     }

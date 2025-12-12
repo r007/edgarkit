@@ -3,12 +3,28 @@ use std::collections::HashMap;
 
 /// Options for filtering filing requests
 #[cfg(any(feature = "filings", feature = "index"))]
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct FilingOptions {
     pub form_types: Option<Vec<String>>,
     pub offset: Option<usize>,
     pub limit: Option<usize>,
     pub ciks: Option<Vec<u64>>,
+    /// Whether to automatically include amendment forms (e.g., S-1/A when S-1 is requested).
+    /// Defaults to true.
+    pub include_amendments: bool,
+}
+
+#[cfg(any(feature = "filings", feature = "index"))]
+impl Default for FilingOptions {
+    fn default() -> Self {
+        Self {
+            form_types: None,
+            offset: None,
+            limit: None,
+            ciks: None,
+            include_amendments: true,
+        }
+    }
 }
 
 #[cfg(any(feature = "filings", feature = "index"))]
@@ -45,6 +61,15 @@ impl FilingOptions {
 
     pub fn with_ciks(mut self, ciks: Vec<u64>) -> Self {
         self.ciks = Some(ciks);
+        self
+    }
+
+    /// Set whether to include amendment forms automatically.
+    ///
+    /// When true (default), requesting "S-1" will also include "S-1/A" filings.
+    /// When false, only the exact form type specified will be returned.
+    pub fn with_include_amendments(mut self, include_amendments: bool) -> Self {
+        self.include_amendments = include_amendments;
         self
     }
 }
