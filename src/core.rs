@@ -300,21 +300,32 @@ impl Edgar {
                     let headers = response.headers().clone();
 
                     // **Primary Check: If JSON was expected but HTML is received (regardless of status for client/server errors)**
-                    if url.ends_with(".json") {
+                    if url.ends_with(".json") && status.is_success() {
                         if let Some(ct) = headers
                             .get(reqwest::header::CONTENT_TYPE)
                             .and_then(|val| val.to_str().ok())
                         {
                             if ct.to_lowercase().contains("text/html") {
-                                // Even if status is not 200 OK, if it's HTML for a .json URL, it's unexpected.
-                                let body_preview = response
+                                // SEC sometimes returns JSON with text/html content-type
+                                // Try to get the body and check if it's actually JSON
+                                let body_text = response
                                     .text()
                                     .await
-                                    .unwrap_or_else(|_| "Failed to read HTML body".to_string())
-                                    .chars()
-                                    .take(200)
-                                    .collect::<String>();
+                                    .unwrap_or_else(|_| "Failed to read response body".to_string());
 
+                                // Try to parse as JSON - if successful, it's valid JSON despite wrong content-type
+                                if body_text.trim_start().starts_with('{')
+                                    || body_text.trim_start().starts_with('[')
+                                {
+                                    tracing::warn!(
+                                        "Received text/html content-type for .json URL, but content appears to be JSON: {}",
+                                        url
+                                    );
+                                    return Ok(body_text);
+                                }
+
+                                // If it's actually HTML, return error
+                                let body_preview = body_text.chars().take(200).collect::<String>();
                                 return Err(EdgarError::UnexpectedContentType {
                                     url: url.to_string(),
                                     expected_pattern: "application/json".to_string(),
