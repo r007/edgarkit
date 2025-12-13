@@ -1,8 +1,44 @@
+//! Error types for the EdgarKit library.
+//!
+//! All fallible operations in EdgarKit return `Result<T, EdgarError>` where `EdgarError`
+//! is an enum covering various failure modes: network errors, HTTP status codes, parsing
+//! failures, validation errors, and SEC-specific issues.
+//!
+//! Errors are designed to be informative, including context like URL previews and HTTP
+//! status codes to aid in debugging. The error types use `thiserror` for clean `Display`
+//! implementations and proper `Error` trait support.
+
 #[cfg(any(feature = "filings", feature = "index", feature = "feeds"))]
 use parsers::error::ParserError;
 use std::string::FromUtf8Error;
 use thiserror::Error;
 
+/// Comprehensive error type for all EdgarKit operations.
+///
+/// This enum covers the various ways that operations can fail when interacting with
+/// the SEC EDGAR system. Errors are categorized by their source: network issues,
+/// HTTP status codes, parsing problems, configuration mistakes, or validation failures.
+///
+/// Each variant includes relevant context to help diagnose issues. For example,
+/// `InvalidResponse` includes a preview of the response content, and `UnexpectedContentType`
+/// shows both the expected and actual content types along with a content preview.
+///
+/// # Examples
+///
+/// Handling specific error types:
+/// ```rust
+/// # use edgarkit::{Edgar, EdgarError, FilingOperations};
+/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+/// # let edgar = Edgar::new("app contact@example.com")?;
+/// match edgar.get_recent_filings("0001234567").await {
+///     Ok(filings) => println!("Found {} filings", filings.len()),
+///     Err(EdgarError::NotFound) => println!("Company not found"),
+///     Err(EdgarError::RateLimitExceeded) => println!("Rate limited, try again later"),
+///     Err(e) => println!("Error: {}", e),
+/// }
+/// # Ok(())
+/// # }
+/// ```
 #[derive(Error, Debug)]
 pub enum EdgarError {
     #[error("HTTP request failed: {0}")]
