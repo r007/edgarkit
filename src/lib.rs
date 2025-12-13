@@ -1,6 +1,6 @@
-//! # Edgar - A Rust client for the SEC EDGAR system
+//! # EdgarKit - A Rust client for the SEC EDGAR system
 //!
-//! The Edgar crate provides a comprehensive and ergonomic API for interacting with
+//! EdgarKit provides a comprehensive and ergonomic API for interacting with
 //! the SEC's EDGAR (Electronic Data Gathering, Analysis, and Retrieval) system.
 //!
 //! ## Features
@@ -12,10 +12,15 @@
 //! - **Feed operations** - Access Atom and RSS feeds for filings and news
 //! - **Index operations** - Retrieve and parse daily and quarterly filing indices
 //!
+//! ## Requirements
+//!
+//! EdgarKit is an async-first library and requires an async runtime. We recommend
+//! [tokio](https://tokio.rs), which is the most widely used async runtime in the Rust ecosystem.
+//!
 //! ## Basic Usage
 //!
 //! ```rust
-//! use edgar::{Edgar, FilingOperations, FilingOptions};
+//! use edgarkit::{Edgar, FilingOperations, FilingOptions};
 //!
 //! #[tokio::main]
 //! async fn main() -> Result<(), Box<dyn std::error::Error>> {

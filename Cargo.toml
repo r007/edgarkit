@@ -1,7 +1,15 @@
 [package]
-name = "edgar"
+name = "edgarkit"
 version = "0.1.0"
 edition = "2024"
+authors = ["Sergey Monin <moninsergei@gmail.com>"]
+license = "MIT"
+description = "A comprehensive Rust client for the SEC EDGAR system"
+repository = "https://github.com/r007/edgarkit"
+documentation = "https://docs.rs/edgarkit"
+keywords = ["sec", "edgar", "finance", "filings", "api"]
+categories = ["api-bindings", "web-programming::http-client"]
+readme = "README.md"
 
 [features]
 default = ["search", "filings", "company", "feeds", "index"]
