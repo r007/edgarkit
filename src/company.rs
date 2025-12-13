@@ -1,3 +1,14 @@
+//! Company metadata and XBRL endpoints.
+//!
+//! This module covers two broad sets of SEC-provided data:
+//! - Company identity lookups (ticker ↔ CIK) used to bootstrap most EDGAR requests.
+//! - XBRL “company facts”, per-concept series, and cross-company “frames” for building
+//!   time series and comparable datasets.
+//!
+//! Most users will start with `company_cik("AAPL")` to resolve a ticker into a CIK,
+//! then call `company_facts(cik)` or `company_concept(cik, taxonomy, tag)` depending
+//! on whether they need the full dataset or a targeted slice.
+
 use super::CompanyOperations;
 use super::Edgar;
 use super::error::{EdgarError, Result};
@@ -6,6 +17,12 @@ use serde::{Deserialize, Serialize};
 use serde_json;
 use std::collections::HashMap;
 
+/// Mapping between stock ticker symbols and company CIKs.
+///
+/// This structure represents a company's stock ticker along with its Central Index Key
+/// (CIK) and official title. The SEC maintains this mapping to help users discover
+/// company identifiers for EDGAR queries. Note that companies can have multiple tickers
+/// across different exchanges.
 #[derive(Debug, Deserialize, Serialize)]
 pub struct CompanyTicker {
     #[serde(rename = "cik_str")]
@@ -14,6 +31,11 @@ pub struct CompanyTicker {
     pub title: String,
 }
 
+/// Mutual fund ticker with series and class identifiers.
+///
+/// Mutual funds have a more complex structure than regular companies, with series
+/// and class designations. This struct provides the full identification information
+/// needed to uniquely identify a specific mutual fund share class.
 #[derive(Debug, Deserialize)]
 pub struct MutualFundTicker {
     pub cik: u64,
@@ -22,6 +44,11 @@ pub struct MutualFundTicker {
     pub symbol: String,
 }
 
+/// Company ticker with exchange information included.
+///
+/// Extends the basic ticker mapping with stock exchange details. This is useful when
+/// you need to distinguish between the same company ticker listed on different exchanges
+/// or when building trading or market data applications.
 #[derive(Debug, Deserialize)]
 pub struct CompanyTickerExchange {
     pub cik: u64,
@@ -30,6 +57,16 @@ pub struct CompanyTickerExchange {
     pub exchange: String,
 }
 
+/// Complete set of XBRL facts reported by a company across all filings.
+///
+/// This structure contains all the structured financial data that a company has reported
+/// in XBRL format. Facts are organized by taxonomy (US-GAAP, DEI) and then by concept tag.
+/// Each fact includes multiple data points representing different time periods, fiscal years,
+/// and filings.
+///
+/// Use this structure when you need comprehensive historical data for a company across
+/// multiple concepts and time periods. For a single concept, consider using `CompanyConcept`
+/// which is more focused and lightweight.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CompanyFacts {
     pub cik: u64,
@@ -39,6 +76,11 @@ pub struct CompanyFacts {
     pub taxonomies: TaxonomyGroups,
 }
 
+/// Container for facts grouped by taxonomy standard.
+///
+/// The SEC's XBRL data uses different taxonomies for different types of information.
+/// US-GAAP (Generally Accepted Accounting Principles) contains financial statement data,
+/// while DEI (Document and Entity Information) contains metadata about the company and filing.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TaxonomyGroups {
     #[serde(rename = "us-gaap")]
@@ -46,6 +88,12 @@ pub struct TaxonomyGroups {
     pub dei: HashMap<String, Fact>,
 }
 
+/// A single XBRL concept with its data points across different units of measure.
+///
+/// Represents a specific financial or business concept (like "Revenue" or "Assets") with
+/// all its reported values. The same concept may be reported in different units (USD, shares,
+/// etc.), so data points are grouped by unit. Labels and descriptions help interpret what
+/// the concept represents in human-readable terms.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Fact {
     #[serde(default)]
@@ -55,6 +103,15 @@ pub struct Fact {
     pub units: HashMap<String, Vec<DataPoint>>,
 }
 
+/// A single data point representing a reported value for a specific time period.
+///
+/// Each data point captures one instance of a reported fact, including the value, the
+/// time period it covers, the filing it came from, and fiscal period information. Some
+/// data points are instantaneous (balance sheet items) while others span a period (income
+/// statement items), which is reflected in the optional `start` field.
+///
+/// The `val` field can contain either a number or a string, as some XBRL concepts are
+/// non-numeric (like descriptive text fields).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DataPoint {
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -72,6 +129,12 @@ pub struct DataPoint {
     pub frame: Option<String>,
 }
 
+/// Historical data for a single XBRL concept across a company's filings.
+///
+/// Similar to a `Fact` from `CompanyFacts`, but retrieved individually for targeted
+/// queries. Use this when you're interested in a specific concept (like "Revenue" or
+/// "Cash") and don't need the full fact set. This is more efficient for single-concept
+/// analysis or time-series construction.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CompanyConcept {
     pub cik: u64,
@@ -84,6 +147,14 @@ pub struct CompanyConcept {
     pub units: HashMap<String, Vec<DataPoint>>,
 }
 
+/// Aggregated data for a specific concept across all companies for a time period.
+///
+/// Frames provide a "cross-sectional" view of XBRL data - instead of one company over
+/// time, you get all companies at a specific point in time. This is useful for peer
+/// comparisons, industry analysis, or building datasets of comparable companies.
+///
+/// For example, you could retrieve revenue for all companies for Q1 2024, enabling
+/// comparative analysis and rankings.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Frame {
     pub ccp: String,
@@ -99,6 +170,11 @@ pub struct Frame {
     pub data_points: Vec<FrameDataPoint>,
 }
 
+/// Data point for a single company within a frame aggregation.
+///
+/// Represents one company's reported value for the concept and time period specified
+/// in the parent `Frame`. Includes entity identification, location, the actual value,
+/// and a reference to the source filing.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FrameDataPoint {
     #[serde(rename = "entityName")]
@@ -120,33 +196,11 @@ enum CompanyUrlType {
     Frames,
 }
 
-/// Builds various EDGAR API URLs based on the specified URL type and parameters.
+/// Builds EDGAR API URLs for company/XBRL endpoints.
 ///
-/// # Arguments
-///
-/// * `url_type` - The type of URL to build, specified as a `CompanyUrlType` enum
-/// * `params` - Slice of string parameters required for building specific URLs
-///
-/// # Returns
-///
-/// * `Result<String>` - The constructed URL as a String if successful
-///
-/// # URL Types and Parameters
-///
-/// * `CompanyTickers` - No parameters required
-/// * `CompanyTickersExchange` - No parameters required
-/// * `MutualFundTickers` - No parameters required
-/// * `CompanyFacts` - Requires [cik]
-/// * `CompanyConcept` - Requires [cik, taxonomy, tag]
-/// * `Frames` - Requires [taxonomy, tag, unit, period]
-///
-/// # Examples
-///
-/// ```
-/// let edgar = Edgar::new();
-/// let url = edgar.build_company_url(CompanyUrlType::CompanyTickers, &[])?;
-/// let facts_url = edgar.build_company_url(CompanyUrlType::CompanyFacts, &["1234567890"])?;
-/// ```
+/// This is an internal helper that centralizes URL formatting for the public
+/// `CompanyOperations` methods. It is not part of the public API surface; prefer
+/// `company_tickers`, `company_facts`, `company_concept`, and `frames`.
 impl Edgar {
     fn build_company_url(&self, url_type: CompanyUrlType, params: &[&str]) -> Result<String> {
         match url_type {
@@ -198,10 +252,11 @@ trait JsonParser {
         F: Fn(&FieldExtractor, &[serde_json::Value]) -> Option<T>;
 }
 
-/// Parses JSON content into a vector of specified type using field extraction and mapping.
+/// Parses tabular SEC JSON content into a vector using field extraction and mapping.
 ///
-/// This method handles JSON data that follows EDGAR's specific format with 'fields' and 'data' arrays.
-/// It extracts data based on required fields and transforms it using a provided mapper function.
+/// Several SEC endpoints represent data as `{ "fields": [...], "data": [...] }` where each row in
+/// `data` is positional. This helper provides a small adapter layer to map those rows into strongly
+/// typed structs.
 ///
 /// # Arguments
 ///
@@ -221,38 +276,7 @@ trait JsonParser {
 /// * `T` - The type of elements in the resulting vector
 /// * `F` - The type of the mapper function
 ///
-/// # Example
-///
-/// ```
-/// let edgar = Edgar::new();
-/// let json_content = r#"
-/// {
-///     "fields": ["cik", "name", "ticker"],
-///     "data": [
-///         [123456, "Company A", "CMPA"],
-///         [789012, "Company B", "CMPB"]
-///     ]
-/// }
-/// "#;
-/// let required_fields = &["cik", "name", "ticker"];
-/// let result: Result<Vec<CompanyTicker>> = edgar.parse_json_array(
-///     json_content,
-///     required_fields,
-///     |extractor, row| {
-///         Some(CompanyTicker {
-///             cik: extractor.extract_value(row, "cik", |v| v.as_u64())?,
-///             name: extractor.extract_value(row, "name", |v| v.as_str().map(String::from))?,
-///             ticker: extractor.extract_value(row, "ticker", |v| v.as_str().map(String::from))?,
-///         })
-///     }
-/// );
-/// assert!(result.is_ok());
-/// let tickers = result.unwrap();
-/// assert_eq!(tickers.len(), 2);
-/// assert_eq!(tickers[0].cik, 123456);
-/// assert_eq!(tickers[0].name, "Company A");
-/// assert_eq!(tickers[0].ticker, "CMPA");
-/// ```
+/// This is an internal helper used by `CompanyOperations`.
 impl JsonParser for Edgar {
     fn parse_json_array<T, F>(
         &self,
@@ -286,7 +310,7 @@ struct FieldExtractor {
     indices: HashMap<String, usize>,
 }
 
-/// A utility struct for extracting fields from rows of JSON data.
+/// A utility struct for extracting fields from rows of tabular SEC JSON data.
 ///
 /// This struct helps manage field extraction by maintaining a mapping between field names
 /// and their positions in data rows.
@@ -295,13 +319,7 @@ struct FieldExtractor {
 ///
 /// * `indices` - HashMap storing the mapping between field names and their indices
 ///
-/// # Examples
-///
-/// ```
-/// let fields = vec!["name".into(), "age".into()];
-/// let required = &["name", "age"];
-/// let extractor = FieldExtractor::new(fields, required)?;
-/// ```
+/// This is an internal helper used by `CompanyOperations`.
 impl FieldExtractor {
     /// Creates a new `FieldExtractor` from a vector of fields and a slice of required field names.
     ///
@@ -397,10 +415,10 @@ impl FieldExtractor {
 ///
 /// # Examples
 ///
-/// ```no_run
-/// # use edgar::{Edgar, CompanyOperations};
+/// ```ignore
+/// # use edgarkit::{Edgar, CompanyOperations};
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-/// let edgar = Edgar::new();
+/// let edgar = Edgar::new("MyApp contact@example.com")?;
 ///
 /// // Get CIK for a company
 /// let apple_cik = edgar.company_cik("AAPL").await?;
