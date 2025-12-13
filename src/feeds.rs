@@ -1,3 +1,15 @@
+//! Atom and RSS feeds for EDGAR filings and SEC news.
+//!
+//! The SEC exposes two main feed formats:
+//! - **Atom** feeds for EDGAR browsing endpoints such as “current filings” and
+//!   company-specific listings.
+//! - **RSS** feeds for press releases, speeches, statements, and various EDGAR
+//!   dissemination streams.
+//!
+//! This module implements `FeedOperations` for [`Edgar`]. Network methods return parsed
+//! `AtomDocument`/`RssDocument` values, and companion `*_from_string` helpers make it easy
+//! to test parsing against fixtures or to integrate with custom download logic.
+
 use super::Edgar;
 use super::FeedOperations;
 use super::error::{EdgarError, Result};
@@ -8,36 +20,29 @@ use parsers::{
     rss::{RssConfig, RssDocument, RssParser},
 };
 
-/// Implements feed operations for the SEC EDGAR system.
-///
-/// This implementation provides methods to fetch and parse various SEC EDGAR feeds,
-/// including current filings, company-specific filings, press releases, and various
-/// specialized RSS feeds.
-///
-/// # Feed Types
-///
-/// The implementation supports two main types of feeds:
-/// * Atom feeds (for current and company-specific filings)
-/// * RSS feeds (for news, alerts, and specialized content)
+/// Feed operations for SEC EDGAR.
 ///
 /// # Examples
 ///
-/// ```no_run
-/// use your_crate::Edgar;
-/// use your_crate::FeedOperations;
+/// ```ignore
+/// use edgarkit::{Edgar, FeedOperations, FeedOptions};
 ///
-/// async fn example() -> Result<(), Box<dyn std::error::Error>> {
-///     let edgar = Edgar::new("your-email@example.com");
+/// #[tokio::main]
+/// async fn main() -> Result<(), Box<dyn std::error::Error>> {
+///     let edgar = Edgar::new("MyApp contact@example.com")?;
 ///
-///     // Fetch current filings
+///     // Atom: current filings (optionally parameterized).
 ///     let current = edgar.current_feed(None).await?;
+///     let opts = FeedOptions::new(None).with_param("count", "25");
+///     let current_limited = edgar.current_feed(Some(opts)).await?;
 ///
-///     // Fetch company-specific filings
+///     // Atom: company-specific feed.
 ///     let company = edgar.company_feed("1018724", None).await?;
 ///
-///     // Fetch press releases
+///     // RSS: SEC news.
 ///     let press = edgar.press_release_feed().await?;
 ///
+///     println!("current={}, current_limited={}, company={}, press={}", current.entries.len(), current_limited.entries.len(), company.entries.len(), press.channel.items.len());
 ///     Ok(())
 /// }
 /// ```
