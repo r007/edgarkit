@@ -1,51 +1,78 @@
-//! Search functionality for SEC EDGAR system.
+//! Search SEC EDGAR filings using flexible criteria and filters.
 //!
-//! This module provides structures and traits for searching SEC EDGAR filings
-//! using various criteria like form types, dates, and keywords.
+//! This module provides a powerful search interface to the SEC's EDGAR full-text search system.
+//! You can search by form type, date ranges, company names, CIKs, keywords, and more. The search
+//! API supports both single-page queries and automatic pagination through all matching results.
 //!
-//! # Examples
+//! Search results include comprehensive metadata about each filing such as company names, CIKs,
+//! filing dates, form types, and accession numbers. Results are returned in reverse chronological
+//! order by default (newest first).
 //!
-//! ```rust
-//! use edgar_client::{Edgar, SearchOperations, SearchOptions};
+//! # Search Capabilities
 //!
-//! #[tokio::main]
-//! async fn main() -> Result<(), Box<dyn std::error::Error>> {
-//!     let edgar = Edgar::new("your_app_name contact@example.com")?;
-//!     
-//!     // Search for recent 10-K filings
-//!     let options = SearchOptions::new()
-//!         .with_forms(vec!["10-K".to_string()])
-//!         .with_count(10)
-//!         .with_date_range("2024-01-01".to_string(), "2024-03-01".to_string());
-//!     
-//!     let results = edgar.search(options).await?;
-//!     
-//!     for hit in results.hits.hits {
-//!         println!("Found: {} filed on {}", hit._source.form, hit._source.file_date);
-//!     }
-//!     Ok(())
-//! }
+//! - Full-text search with keyword queries
+//! - Filter by form types (10-K, 8-K, S-1, etc.)
+//! - Date range filtering
+//! - Company name or CIK filtering
+//! - SIC code and location-based filtering
+//! - Pagination with configurable page sizes
+//!
+//! # Performance
+//!
+//! The `search_all()` method fetches all results across multiple pages using parallel requests
+//! (up to 7 concurrent) while respecting rate limits. This provides significantly better
+//! performance than sequential pagination for large result sets.
+//!
+//! # Example
+//!
+//! ```ignore
+//! use edgarkit::{Edgar, SearchOperations, SearchOptions};
+//!
+//! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+//! let edgar = Edgar::new("your_app_name contact@example.com")?;
+//!
+//! let options = SearchOptions::new()
+//!     .with_forms(vec!["10-K".to_string()])
+//!     .with_date_range("2024-01-01".to_string(), "2024-12-31".to_string())
+//!     .with_count(100);
+//!
+//! let results = edgar.search_all(options).await?;
+//! # Ok(())
+//! # }
 //! ```
 
 use super::Edgar;
 use super::error::{EdgarError, Result};
 use super::traits::SearchOperations;
 use async_trait::async_trait;
-use serde::Deserialize;
+use serde::{Deserialize, Deserializer, de};
 
-/// Response from the EDGAR search API
+/// Response container from the EDGAR search API containing search metadata and results.
+///
+/// This structure wraps the complete search response including timing information,
+/// shard statistics from Elasticsearch, and the actual search hits. The search
+/// system uses Elasticsearch under the hood, which is why you'll see fields like
+/// `_shards` and `_score` that are specific to that search engine.
 #[derive(Debug, Clone, Deserialize)]
 pub struct SearchResponse {
-    /// Time taken to execute the search in milliseconds
+    /// Time taken to execute search (ms)
     pub took: u32,
+
     /// Whether the search timed out
     pub timed_out: bool,
-    /// Information about the shards that processed the search
+
+    /// Shard information
     pub _shards: Shards,
-    /// Search results containing matched documents
+
+    /// Search results
     pub hits: Hits,
 }
 
+/// Information about Elasticsearch shards that processed the search query.
+///
+/// The EDGAR search system uses Elasticsearch which distributes data across multiple
+/// shards for performance. This struct provides diagnostic information about how many
+/// shards were involved and whether all completed successfully.
 #[derive(Debug, Clone, Deserialize)]
 pub struct Shards {
     pub total: u32,
@@ -54,121 +81,225 @@ pub struct Shards {
     pub failed: u32,
 }
 
+/// Container for search results including total count and individual hit documents.
+///
+/// This structure holds the array of matching filings along with metadata about the
+/// total number of matches and relevance scoring. The `total` field indicates how
+/// many documents matched your search criteria, while `hits` contains the actual
+/// results for the current page.
 #[derive(Debug, Clone, Deserialize)]
 pub struct Hits {
+    /// Total hits information
     pub total: TotalHits,
+
+    /// Maximum relevance score
     #[serde(default)]
     pub max_score: Option<f64>,
+
+    /// Array of hit documents
     pub hits: Vec<Hit>,
 }
 
+/// Total count of matching documents and the relationship type.
+///
+/// The `relation` field indicates whether the count is exact ("eq") or a lower bound
+/// ("gte"). For very large result sets, Elasticsearch may provide an approximate count.
 #[derive(Debug, Clone, Deserialize)]
 pub struct TotalHits {
     pub value: u32,
     pub relation: String,
 }
 
+/// A single search result representing a matching SEC filing.
+///
+/// Each hit contains metadata about the search match (index name, document ID, relevance
+/// score) and the actual filing data in the `_source` field. The underscore-prefixed
+/// fields are Elasticsearch conventions for system metadata.
 #[derive(Debug, Clone, Deserialize)]
 pub struct Hit {
+    /// Index name
     pub _index: String,
+
+    /// Document ID
     pub _id: String,
+
+    /// Relevance score
     #[serde(default)]
     pub _score: Option<f64>,
+
+    /// Filing information
     pub _source: Source,
 }
 
+/// Filing information and metadata extracted from the EDGAR search index.
+///
+/// This structure contains all the details about a specific SEC filing including company
+/// identifiers, filing metadata, form type, and business information. This is the primary
+/// data payload for each search result and includes everything you need to identify and
+/// retrieve the actual filing documents.
+///
+/// Many fields are arrays because a single filing can be associated with multiple entities,
+/// locations, or classification codes. For example, merger filings may list multiple CIKs.
 #[derive(Debug, Clone, Deserialize)]
 pub struct Source {
+    /// Company CIK numbers
     pub ciks: Vec<String>,
+
+    /// Period ending date (if applicable)
     #[serde(default)]
     pub period_ending: Option<String>,
+
+    /// File numbers
     pub file_num: Option<Vec<String>>,
+
+    /// Company display names
     pub display_names: Vec<String>,
+
+    /// XSL stylesheet reference
     #[serde(default)]
     pub xsl: Option<String>,
+
+    /// Sequence number
     #[serde(deserialize_with = "deserialize_sequence")]
     pub sequence: u32,
+
+    /// Root form types
     pub root_forms: Vec<String>,
+
+    /// Filing date (YYYY-MM-DD)
     pub file_date: String,
+
+    /// Business states
     pub biz_states: Vec<String>,
+
+    /// SIC codes
     pub sics: Vec<String>,
+
+    /// Form type (e.g., "10-K", "8-K")
     pub form: String,
+
+    /// Accession number
     pub adsh: String,
+
+    /// Film numbers
     pub film_num: Vec<String>,
+
+    /// Business locations
     pub biz_locations: Vec<String>,
+
+    /// File type
     pub file_type: String,
+
+    /// File description
     #[serde(default)]
     pub file_description: Option<String>,
+
+    /// Incorporation states
     pub inc_states: Vec<String>,
+
+    /// Item numbers (for 8-K)
     pub items: Option<Vec<String>>,
 }
 
-/// Options for configuring EDGAR searches
+/// Configurable options for searching SEC EDGAR filings.
 ///
-/// # Examples
+/// This builder-style struct allows you to construct complex search queries using a fluent
+/// interface. Combine multiple filters to narrow down results: form types, date ranges,
+/// company identifiers, keywords, and more. All options are optional - you can construct
+/// as simple or complex a query as needed.
 ///
-/// Basic search for a company:
+/// The search system supports advanced query syntax including Boolean operators, phrase
+/// searches with quotes, and wildcards. See the SEC's EDGAR full-text search FAQ for
+/// details on query syntax and special operators.
+///
+/// # Builder Pattern
+///
+/// Options are set using builder methods that return `self`, allowing you to chain
+/// multiple calls together. For example:
+///
 /// ```rust
+/// # use edgarkit::SearchOptions;
 /// let options = SearchOptions::new()
-///     .with_query("Apple Inc")
-///     .with_forms(vec!["10-K".to_string(), "10-Q".to_string()]);
-/// ```
-///
-/// Search with date range and pagination:
-/// ```rust
-/// let options = SearchOptions::new()
-///     .with_query("merger announcement")
+///     .with_query("acquisition merger")
 ///     .with_forms(vec!["8-K".to_string()])
 ///     .with_date_range("2024-01-01".to_string(), "2024-12-31".to_string())
-///     .with_page(1)
-///     .with_count(50);
+///     .with_count(100);
 /// ```
+///
+/// # Pagination
+///
+/// Control pagination using `with_page()`, `with_from()`, and `with_count()`. The maximum
+/// results per page is 100. For retrieving all results across multiple pages, use the
+/// `search_all()` method instead of manually paginating.
+///
+/// # Common Patterns
+///
+/// - **Recent filings**: Use `with_forms()` and `with_count()` without date filters
+/// - **Company-specific**: Use `with_ciks()` to filter by one or more company CIKs
+/// - **Date-bounded**: Use `with_date_range()` to limit results to a specific time period
+/// - **Form type filtering**: Use `with_forms()` to search specific filing types
 #[derive(Debug, Clone, Default)]
 pub struct SearchOptions {
+    /// Typeahead keys
     pub keys_typed: Option<String>,
-    /// Search query. For details on special formatting, see the {@link https://www.sec.gov/edgar/search/efts-faq.html|FAQ}
+
+    /// Search query (supports special operators, see SEC FAQ)
     pub query: Option<String>,
+
+    /// Filing category
     pub category: Option<String>,
-    /// Filter based on company's location
+
+    /// Filter by company location
     pub location_code: Option<String>,
-    /// Company name OR individual's name. Cannot be combined with `cik` or `sik`..
+
+    /// Company or individual name (cannot combine with cik or sic)
     pub entity_name: Option<String>,
-    /// Type of forms to search - e.g. '10-K'. Can also be an array of types - e.g. ["S-1", "10-K", "10-Q"]
+
+    /// Form types to search (e.g., ["10-K", "10-Q"])
     pub forms: Option<Vec<String>>,
-    /// Filter based on company's location
+
+    /// Filter by multiple location codes
     pub location_codes: Option<Vec<String>>,
-    /// Which page of results to return
+
+    /// Page number for pagination
     pub page: Option<u32>,
-    /// Skip a number of results
+
+    /// Number of results to skip
     pub from: Option<u32>,
-    /// Number of results to return - will always try to return 100
+
+    /// Number of results to return (max 100)
     pub count: Option<u32>,
-    /// If true, order by oldest first instead of newest first.
+
+    /// Order by oldest first instead of newest
     pub reverse_order: Option<bool>,
-    /// Start date. Must be in the form of `yyyy-mm-dd`. Must also specify `enddt`
+
+    /// Start date (YYYY-MM-DD, requires end_date)
     pub start_date: Option<String>,
-    /// End date. Must be in the form of `yyyy-mm-dd`. Must also specify `startdt`
+
+    /// End date (YYYY-MM-DD, requires start_date)
     pub end_date: Option<String>,
-    /// Search by base words(default) or exactly as entered
+
+    /// Search by base words (default) or exactly as entered
     pub stemming: Option<String>,
-    /// Company code(s) to search. Can be a single CIK or multiple CIKs as an array.
-    /// Cannot be combined with `name` or `sic`
+
+    /// CIK codes to search (cannot combine with name or sic)
     pub ciks: Option<Vec<String>>,
-    /// Standard Industrial Classification of filer
-    /// Special options - 1: all, 0: Unspecified
+
+    /// Standard Industrial Classification code
     pub sic: Option<String>,
-    /// Boolean to use location of incorporation rather than location of HQ
+
+    /// Use incorporation location instead of HQ location
     pub incorporated_location: Option<bool>,
 }
 
 /// Custom deserializer for sequence field that can be either u32 or string
 fn deserialize_sequence<'de, D>(deserializer: D) -> std::result::Result<u32, D::Error>
 where
-    D: serde::Deserializer<'de>,
+    D: Deserializer<'de>,
 {
     struct SequenceVisitor;
 
-    impl<'de> serde::de::Visitor<'de> for SequenceVisitor {
+    impl<'de> de::Visitor<'de> for SequenceVisitor {
         type Value = u32;
 
         fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
@@ -177,16 +308,16 @@ where
 
         fn visit_u64<E>(self, value: u64) -> std::result::Result<Self::Value, E>
         where
-            E: serde::de::Error,
+            E: de::Error,
         {
             Ok(value as u32)
         }
 
         fn visit_str<E>(self, value: &str) -> std::result::Result<Self::Value, E>
         where
-            E: serde::de::Error,
+            E: de::Error,
         {
-            value.parse().map_err(serde::de::Error::custom)
+            value.parse().map_err(de::Error::custom)
         }
     }
 
@@ -199,10 +330,12 @@ impl SearchOptions {
         Self::default()
     }
 
-    /// Sets the search query text
+    /// Sets the search query text.
     ///
     /// # Example
+    ///
     /// ```rust
+    /// # use edgarkit::SearchOptions;
     /// let options = SearchOptions::new()
     ///     .with_query("quarterly report");
     /// ```
@@ -288,18 +421,17 @@ impl SearchOptions {
         self
     }
 
-    /// Sets company CIK filter(s)
-    ///
-    /// # Arguments
-    /// * `ciks` - A single CIK or multiple CIKs
+    /// Sets company CIK filter(s).
     ///
     /// # Examples
-    /// ```
+    ///
+    /// ```rust
+    /// # use edgarkit::SearchOptions;
     /// // Single CIK
-    /// let options = SearchOptions::new().with_ciks("0001234567");
+    /// let options = SearchOptions::new().with_ciks(vec!["0001234567".to_string()]);
     ///
     /// // Multiple CIKs
-    /// let options = SearchOptions::new().with_ciks(vec!["0001234567", "0007654321"]);
+    /// let options = SearchOptions::new().with_ciks(vec!["0001234567".to_string(), "0007654321".to_string()]);
     /// ```
     pub fn with_ciks<T>(mut self, ciks: T) -> Self
     where
@@ -412,60 +544,81 @@ impl SearchOptions {
     }
 }
 
-/// Operations for searching SEC EDGAR filings
+/// Search operations for querying SEC EDGAR filings with flexible filters and criteria.
 ///
-/// This trait provides methods for searching and retrieving filing documents from the SEC EDGAR system.
-/// Supports both single-page searches and comprehensive multi-page searches with automatic pagination.
+/// This trait provides two main search methods: `search()` for single-page queries and
+/// `search_all()` for comprehensive multi-page retrieval. Both methods use the same
+/// `SearchOptions` for filtering, but `search_all()` automatically handles pagination
+/// and fetches all matching results in parallel batches.
 ///
-/// # Examples
+/// The search system is powered by SEC's EDGAR full-text search, which indexes filing
+/// content, company names, form types, and metadata. Results are ranked by relevance
+/// when using keyword queries, or sorted by filing date when searching by form type
+/// or date range.
 ///
-/// Basic search for the most recent filings:
-/// ```rust
-/// use edgar_client::{Edgar, SearchOperations, SearchOptions};
+/// # Performance Considerations
 ///
-/// async fn search_recent_filings() -> Result<(), Box<dyn std::error::Error>> {
+/// For large result sets (>100 documents), `search_all()` is significantly faster than
+/// manually paginating because it fetches multiple pages concurrently. However, it will
+/// retrieve ALL matching results, which could be thousands of documents. Consider using
+/// date ranges or other filters to limit scope when appropriate.
+///
+/// # Example
+///
+/// ```ignore
+/// use edgarkit::{Edgar, SearchOperations, SearchOptions};
+///
+/// async fn example() -> Result<(), Box<dyn std::error::Error>> {
 ///     let edgar = Edgar::new("your_app_name contact@example.com")?;
 ///     
 ///     let options = SearchOptions::new()
 ///         .with_forms(vec!["10-K".to_string()])
 ///         .with_count(10);
 ///     
-///     // Get just the first page
+///     // Single page
 ///     let first_page = edgar.search(options.clone()).await?;
+///     println!("First page: {} results", first_page.hits.hits.len());
 ///     
-///     // Get all matching results across all pages
+///     // All results across pages
 ///     let all_results = edgar.search_all(options).await?;
-///     
-///     println!("Found {} total results", all_results.len());
-///     Ok(())
-/// }
-/// ```
-///
-/// Advanced search with multiple criteria:
-/// ```rust
-/// async fn search_spac_filings() -> Result<(), Box<dyn std::error::Error>> {
-///     let edgar = Edgar::new("your_app_name contact@example.com")?;
-///     
-///     let options = SearchOptions::new()
-///         .with_query("SPAC \"Rule 419\"")
-///         .with_forms(vec!["S-1".to_string()])
-///         .with_date_range("2023-01-01".to_string(), "2023-12-31".to_string());
-///     
-///     let all_results = edgar.search_all(options).await?;
-///     
-///     // Process all results
-///     for hit in all_results {
-///         println!("Found: {} filed on {}", hit._source.form, hit._source.file_date);
-///     }
+///     println!("Total results: {}", all_results.len());
 ///     Ok(())
 /// }
 /// ```
 #[async_trait]
 impl SearchOperations for Edgar {
-    /// Performs a single search query on EDGAR
+    /// Executes a search query and returns a single page of results.
     ///
-    /// Returns results for a single page based on the provided options.
-    /// Use `search_all` if you need all results across multiple pages.
+    /// This method performs one search request and returns the results for the specified
+    /// page. Use this when you only need a small number of results or want to implement
+    /// custom pagination logic. For retrieving all matching results, use `search_all()`
+    /// which handles pagination automatically.
+    ///
+    /// The returned `SearchResponse` includes metadata about the search (execution time,
+    /// total hits) along with the actual results for the current page. By default, results
+    /// are sorted by filing date (newest first) unless a keyword query is provided, in
+    /// which case they're ranked by relevance.
+    ///
+    /// # Arguments
+    ///
+    /// * `options` - Search filters and pagination settings
+    ///
+    /// # Returns
+    ///
+    /// Returns a `SearchResponse` containing search metadata and results for one page.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// let options = SearchOptions::new()
+    ///     .with_forms(vec!["10-Q".to_string()])
+    ///     .with_page(1)
+    ///     .with_count(50);
+    ///
+    /// let response = edgar.search(options).await?;
+    /// println!("Found {} total matches", response.hits.total.value);
+    /// println!("This page has {} results", response.hits.hits.len());
+    /// ```
     async fn search(&self, options: SearchOptions) -> Result<SearchResponse> {
         let params = options.to_query_params();
         let query_string = serde_urlencoded::to_string(&params)
@@ -477,30 +630,49 @@ impl SearchOperations for Edgar {
         Ok(serde_json::from_str(&response)?)
     }
 
-    /// Performs a comprehensive search query and fetches all available results
+    /// Fetches all matching results across multiple pages with automatic pagination.
     ///
-    /// This method automatically handles pagination and fetches all available results
-    /// matching the search criteria. Results are fetched in parallel batches for efficiency
-    /// while respecting SEC's rate limits.
+    /// This method is designed for comprehensive data retrieval where you need all filings
+    /// matching your search criteria. It automatically handles pagination by first querying
+    /// for total count, then fetching all pages in parallel batches of up to 7 concurrent
+    /// requests. This provides excellent performance while respecting SEC rate limits.
+    ///
+    /// The method aggregates all results into a single vector of `Hit` objects, making it
+    /// easy to process the complete result set. Progress and errors are logged using the
+    /// `tracing` crate, so you can monitor long-running searches.
+    ///
+    /// # Performance Notes
+    ///
+    /// - Uses parallel requests (batch size: 7) to fetch multiple pages simultaneously
+    /// - Respects rate limiting between batches
+    /// - For 1000+ results, this is significantly faster than sequential pagination
+    /// - Memory usage scales with result set size - consider filtering for very large queries
     ///
     /// # Arguments
     ///
-    /// * `options` - Search criteria and filters
+    /// * `options` - Search filters and criteria (pagination options are overridden)
     ///
     /// # Returns
     ///
-    /// Returns a vector containing all matching hits across all pages
+    /// Returns a vector containing all matching `Hit` objects across all pages.
     ///
     /// # Example
     ///
-    /// ```rust
+    /// ```ignore
     /// let options = SearchOptions::new()
-    ///     .with_query("quarterly report")
+    ///     .with_query("quarterly earnings")
     ///     .with_forms(vec!["10-Q".to_string()])
     ///     .with_date_range("2024-01-01".to_string(), "2024-03-31".to_string());
     ///
     /// let all_results = edgar.search_all(options).await?;
-    /// println!("Found {} quarterly reports", all_results.len());
+    /// println!("Retrieved {} quarterly reports", all_results.len());
+    ///
+    /// for hit in all_results {
+    ///     println!("{}: {} filed on {}",
+    ///         hit._source.display_names[0],
+    ///         hit._source.form,
+    ///         hit._source.file_date);
+    /// }
     /// ```
     async fn search_all(&self, mut options: SearchOptions) -> Result<Vec<Hit>> {
         const BATCH_SIZE: u32 = 7; // Maximum number of concurrent requests
