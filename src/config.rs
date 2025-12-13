@@ -1,35 +1,79 @@
+//! Configuration types for customizing Edgar client behavior.
+//!
+//! The configuration system allows you to control rate limiting, HTTP timeouts,
+//! base URLs, and user agent strings. Most users can rely on the defaults provided
+//! by `Edgar::new()`, but custom configurations are useful for testing, research
+//! applications with specific performance requirements, or compliance scenarios.
+
 use std::time::Duration;
 
-/// Configuration for the Edgar client
+/// Configuration settings for the Edgar HTTP client.
+///
+/// This struct contains all the settings needed to customize how the Edgar client
+/// behaves, including network timeouts, rate limiting, and service endpoints. The
+/// default configuration is optimized for general use and SEC.gov compliance, but
+/// you can adjust these settings based on your application's needs.
+///
+/// # Examples
+///
+/// Using defaults:
+/// ```rust
+/// # use edgarkit::EdgarConfig;
+/// let config = EdgarConfig::default();
+/// ```
+///
+/// Custom configuration:
+/// ```rust
+/// # use edgarkit::{EdgarConfig, EdgarUrls};
+/// # use std::time::Duration;
+/// let config = EdgarConfig::new(
+///     "research_app/1.0 contact@university.edu",
+///     5,  // More conservative rate
+///     Duration::from_secs(45),
+///     None,  // Use default URLs
+/// );
+/// ```
 #[derive(Debug, Clone)]
 pub struct EdgarConfig {
-    /// User agent string for HTTP requests
+    /// User agent string for HTTP requests (required by SEC)
     pub user_agent: String,
-    /// Rate limit in requests per second
+
+    /// Rate limit in requests per second (default: 10)
     pub rate_limit: u32,
-    /// HTTP request timeout
+
+    /// HTTP request timeout duration
     pub timeout: Duration,
+
     /// Base URLs for different EDGAR services
     pub base_urls: EdgarUrls,
 }
 
-/// Base URLs for different EDGAR services
+/// Base URLs for the different SEC EDGAR service endpoints.
+///
+/// The SEC EDGAR system is distributed across multiple domains, each serving
+/// different types of content. The archives domain hosts historical filings,
+/// the data domain provides structured API access, and the files domain serves
+/// various data files. You typically won't need to change these unless you're
+/// running tests against a mock server.
 #[derive(Debug, Clone)]
 pub struct EdgarUrls {
-    /// Base URL for EDGAR archives
+    /// Archives base URL (historical filings)
     pub archives: String,
-    /// Base URL for EDGAR data
+
+    /// Data API base URL (structured data)
     pub data: String,
-    /// Base URL for EDGAR files
+
+    /// Files base URL (company tickers, etc.)
     pub files: String,
-    /// Base URL for EDGAR search
+
+    /// Search API base URL
     pub search: String,
 }
 
 impl Default for EdgarConfig {
     fn default() -> Self {
         Self {
-            user_agent: "edgar_client/0.1.0".to_string(),
+            user_agent: "edgarkit/0.1.0".to_string(),
             rate_limit: 10,
             timeout: Duration::from_secs(30),
             base_urls: EdgarUrls {
@@ -43,20 +87,20 @@ impl Default for EdgarConfig {
 }
 
 impl EdgarConfig {
-    /// Creates a new EdgarConfig with custom settings
+    /// Creates custom Edgar configuration.
     ///
-    /// # Basic usage
+    /// # Example
     ///
-    /// ```rust
-    /// use edgar_client::{Edgar, EdgarConfig, EdgarUrls};
+    /// ```ignore
+    /// use edgarkit::{EdgarConfig, EdgarUrls};
     /// use std::time::Duration;
-    /// let config = EdgarConfig {
-    ///    user_agent: "YourAppName contact@example.com".to_string(),
-    ///    rate_limit: 10, // requests per second
-    ///    timeout: Duration::from_secs(30),
-    ///    base_urls: EdgarUrls::default(),
-    /// };
-    /// let edgar = Edgar::with_config(config)?;
+    ///
+    /// let config = EdgarConfig::new(
+    ///     "MyApp contact@example.com",
+    ///     10,
+    ///     Duration::from_secs(30),
+    ///     None,
+    /// );
     /// ```
     pub fn new(
         user_agent: impl Into<String>,
