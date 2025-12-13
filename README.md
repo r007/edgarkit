@@ -4,11 +4,11 @@
 [![Documentation](https://docs.rs/edgarkit/badge.svg)](https://docs.rs/edgarkit)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A comprehensive Rust client for the SEC EDGAR (Electronic Data Gathering, Analysis, and Retrieval) system.
+An unofficial Rust client for the SEC EDGAR (Electronic Data Gathering, Analysis, and Retrieval) system.
 
 ## Why EdgarKit
 
-EdgarKit is built for high-throughput, production-grade pipelines that need to ingest, search, and process SEC filings reliably and fast. It’s a great fit for:
+EdgarKit is built for financial apps and high-throughput, production-grade pipelines that need to ingest, search, and process SEC filings reliably and fast. It’s a great fit for:
 
 - High-performance financial data pipelines (ETL and streaming)
 - Quantitative and fundamental investment research
