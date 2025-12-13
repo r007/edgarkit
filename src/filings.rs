@@ -478,29 +478,6 @@ impl Edgar {
 ///   skipped rather than failing the entire call.
 /// - If you filter by form types, amendments can be included automatically via
 ///   [`FilingOptions::with_include_amendments`] (enabled by default).
-///
-/// # Examples
-///
-/// ```ignore
-/// use edgarkit::{Edgar, FilingOperations, FilingOptions};
-///
-/// #[tokio::main]
-/// async fn main() -> Result<(), Box<dyn std::error::Error>> {
-///     let edgar = Edgar::new("app contact@example.com")?;
-///
-///     // Metadata (recent filings table normalized into rows).
-///     let recent = edgar.get_recent_filings("1018724").await?;
-///
-///     // Filter by form type (includes amendments by default).
-///     let opts = FilingOptions::new().with_form_type("10-K".to_string());
-///     let only_10k = edgar.filings("1018724", Some(opts)).await?;
-///
-///     // Content (downloads the primary doc for the latest matching filing).
-///     let latest_10k_html = edgar.get_latest_filing_content("1018724", "10-K").await?;
-///     println!("recent={}, only_10k={}, bytes={}", recent.len(), only_10k.len(), latest_10k_html.len());
-///     Ok(())
-/// }
-/// ```
 #[async_trait]
 impl FilingOperations for Edgar {
     /// Retrieves submission history for a given CIK.
