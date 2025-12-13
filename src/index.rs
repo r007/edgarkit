@@ -1,3 +1,49 @@
+//! Daily and quarterly filing indices.
+//!
+//! EDGAR publishes *index files* that act as a manifest of filings, either for a single day
+//! (daily index) or for an entire quarter (full index). These indices are a great fit for
+//! bulk ingestion pipelines because they are stable, append-only over time, and avoid the
+//! need to crawl company-by-company when you want “everything filed on a date”.
+//!
+//! This module implements `IndexOperations` for [`Edgar`]. Under the hood it:
+//! - Lists available index files via SEC-provided `index.json` directory listings.
+//! - Downloads the selected index file (`.idx` or `.gz`) from the EDGAR archives.
+//! - Parses it using the `parsers::index` parser into [`IndexEntry`] records.
+//! - Optionally applies [`FilingOptions`] filters (`form_types`, `ciks`, `offset`, `limit`).
+//!
+//! The SEC directory listing uses human-readable sizes and a custom timestamp format
+//! (`MM/DD/YYYY HH:MM:SS AM/PM`), which is handled by `edgar_date_format`.
+//!
+//! # Examples
+//!
+//! ```ignore
+//! use edgarkit::{Edgar, EdgarDay, EdgarPeriod, FilingOptions, IndexOperations, Quarter};
+//!
+//! #[tokio::main]
+//! async fn main() -> Result<(), Box<dyn std::error::Error>> {
+//!     let edgar = Edgar::new("MyApp contact@example.com")?;
+//!
+//!     // Fetch all filings for a specific day.
+//!     let day = EdgarDay::new(2023, 8, 15)?;
+//!     let daily = edgar.get_daily_filings(day, None).await?;
+//!
+//!     // Apply filters (form types + CIKs) on the parsed index entries.
+//!     let opts = FilingOptions::new()
+//!         .with_form_types(vec!["10-K".to_string(), "8-K".to_string()])
+//!         .with_ciks(vec![320193]);
+//!     let filtered = edgar.get_daily_filings(day, Some(opts)).await?;
+//!
+//!     // Fetch all filings for a specific quarter.
+//!     let period = EdgarPeriod::new(2023, Quarter::Q3)?;
+//!     let quarterly = edgar.get_period_filings(period, None).await?;
+//!
+//!     // Inspect what index files exist for a quarter.
+//!     let listing = edgar.daily_index(Some(period)).await?;
+//!     println!("{} items", listing.directory.item.len());
+//!     Ok(())
+//! }
+//! ```
+
 use super::Edgar;
 use super::error::{EdgarError, Result};
 use super::options::FilingOptions;
@@ -13,13 +59,19 @@ use std::io::Read;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "kebab-case")]
 pub struct IndexResponse {
+    /// Directory listing payload returned by `index.json`.
     pub directory: Directory,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Directory {
+    /// Directory items (files and subdirectories).
     pub item: Vec<DirectoryItem>,
+
+    /// Directory name (typically ends with a trailing `/`).
     pub name: String,
+
+    /// Parent directory path as reported by the SEC listing.
     #[serde(rename = "parent-dir")]
     pub parent_dir: String,
 }
@@ -27,42 +79,35 @@ pub struct Directory {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "lowercase")]
 pub enum ItemType {
+    /// A subdirectory.
     Dir,
+
+    /// A file.
     File,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DirectoryItem {
+    /// Last modified timestamp.
     #[serde(rename = "last-modified")]
     #[serde(with = "edgar_date_format")]
     pub last_modified: NaiveDateTime,
+
+    /// Item name (filename or directory name).
     pub name: String,
+
+    /// Item type (file or directory).
     #[serde(rename = "type")]
     pub type_: ItemType,
+
+    /// Relative URL path (joined with the corresponding archives prefix).
     pub href: String,
+
+    /// File size (human-readable, as provided by the SEC listing).
     pub size: String,
 }
 
-/// A module providing custom serialization and deserialization for dates in Edgar format.
-///
-/// The format used is "%m/%d/%Y %I:%M:%S %p" (example: "12/31/2023 11:59:59 PM")
-///
-/// # Functions
-///
-/// * `deserialize` - Deserializes a string in Edgar date format into a `NaiveDateTime`
-/// * `serialize` - Serializes a `NaiveDateTime` into a string using Edgar date format
-///
-/// # Example
-///
-/// ```
-/// use serde::{Serialize, Deserialize};
-///
-/// #[derive(Serialize, Deserialize)]
-/// struct Document {
-///     #[serde(with = "edgar_date_format")]
-///     filing_date: NaiveDateTime
-/// }
-/// ```
+/// Serde helpers for EDGAR date format (`MM/DD/YYYY HH:MM:SS AM/PM`).
 mod edgar_date_format {
     use chrono::NaiveDateTime;
     use serde::{self, Deserialize, Deserializer, Serializer};
@@ -85,7 +130,9 @@ mod edgar_date_format {
     }
 }
 
-/// Represents a fiscal quarter in the EDGAR filing system
+/// Fiscal quarter (Q1-Q4).
+///
+/// EDGAR index directories are grouped by quarter (e.g., `QTR1` .. `QTR4`).
 ///
 /// Each quarter maps to specific months:
 /// - Q1: January through March
@@ -119,60 +166,50 @@ impl Quarter {
         }
     }
 
-    /// Converts Quarter to its integer representation (1-4)
+    /// Converts the quarter to its integer representation (1-4).
     pub fn as_i32(&self) -> i32 {
         *self as i32
     }
 }
 
-/// Represents a specific day in EDGAR's filing system
-///
-/// All dates must be from 1994 or later, as this marks the
-/// beginning of electronic filings in the EDGAR system.
+/// A specific day in EDGAR's system (must be 1994 or later).
 #[derive(Debug, Clone, Copy)]
 pub struct EdgarDay {
+    /// Calendar year (>= 1994).
     year: i32,
+
+    /// Calendar month (1-12).
     month: u32,
+
+    /// Calendar day (1-31).
     day: u32,
 }
 
-/// Represents a day in the EDGAR filing system's timeline
+/// A validated calendar date used to locate a daily EDGAR index file.
 ///
-/// # Fields
-/// * `year` - The year (must be 1994 or later)
-/// * `month` - The month (1-12)
-/// * `day` - The day of the month (1-31)
+/// Daily indices live under `.../daily-index/<YEAR>/QTR<1-4>/` and include the date in the
+/// filename (e.g., `company.20230815.idx`). `EdgarDay` exists to keep that path construction
+/// correct and to provide a single place for basic validation.
 ///
-/// # Methods
-/// * `new()` - Creates a new EdgarDay instance with validation
-/// * `format_date()` - Formats the date as YYYYMMDD string
-/// * `quarter()` - Returns the fiscal quarter for this date
-/// * `year()` - Returns the year
+/// # Example
+/// ```rust
+/// use edgarkit::{EdgarDay, Quarter, Result};
 ///
-/// # Errors
-/// Returns an error if:
-/// * Year is before 1994
-/// * Month is not 1-12
-/// * Day is not 1-31
-///
-/// # Examples
-/// ```
-/// let edgar_day = EdgarDay::new(2023, 12, 25)?;
-/// assert_eq!(edgar_day.format_date(), "20231225");
-/// assert_eq!(edgar_day.quarter(), Quarter::Q4);
+/// fn main() -> Result<()> {
+///     let day = EdgarDay::new(2023, 12, 25)?;
+///     assert_eq!(day.format_date(), "20231225");
+///     assert_eq!(day.quarter(), Quarter::Q4);
+///     Ok(())
+/// }
 /// ```
 impl EdgarDay {
-    /// Creates a new EdgarDay with validation
-    ///
-    /// # Arguments
-    /// * `year` - Year (must be 1994 or later)
-    /// * `month` - Month (1-12)
-    /// * `day` - Day (1-31)
+    /// Creates a new EdgarDay with validation.
     ///
     /// # Errors
-    /// * `EdgarError::InvalidYear` if year < 1994
-    /// * `EdgarError::InvalidMonth` if month is invalid
-    /// * `EdgarError::InvalidDay` if day is invalid
+    ///
+    /// - `InvalidYear` if year < 1994
+    /// - `InvalidMonth` if month not 1-12
+    /// - `InvalidDay` if day not 1-31
     pub fn new(year: i32, month: u32, day: u32) -> Result<Self> {
         if year < 1994 {
             return Err(EdgarError::InvalidYear);
@@ -186,18 +223,12 @@ impl EdgarDay {
         Ok(Self { year, month, day })
     }
 
-    /// Formats the date as YYYYMMDD string
-    ///
-    /// # Returns
-    /// String in format "YYYYMMDD" (e.g., "20230815")
+    /// Formats as `YYYYMMDD` (e.g., "20230815").
     pub fn format_date(&self) -> String {
         format!("{:04}{:02}{:02}", self.year, self.month, self.day)
     }
 
-    /// Gets the fiscal quarter for this date
-    ///
-    /// # Returns
-    /// Quarter enum representing the fiscal quarter
+    /// Returns the quarter directory (`QTR1`..`QTR4`) that EDGAR uses for this date.
     pub fn quarter(&self) -> Quarter {
         Quarter::from_month(self.month).unwrap()
     }
@@ -208,17 +239,25 @@ impl EdgarDay {
     }
 }
 
-/// Represents a fiscal period (year + quarter) in EDGAR
+/// A fiscal period (year + quarter) used to locate quarterly index directories.
+///
+/// Quarterly indices live under paths like `.../full-index/<YEAR>/QTR<1-4>/` (and similarly
+/// for `daily-index`). This type is intentionally small: it validates the year and carries the
+/// quarter, which is all you need for directory listings and quarterly index retrieval.
 #[derive(Debug, Clone, Copy)]
 pub struct EdgarPeriod {
     year: i32,
     quarter: Quarter,
 }
 
+/// Internal discriminator used when searching a directory listing.
+///
+/// Daily indices encode the date in the filename (e.g., `company.YYYYMMDD.idx`). Quarterly
+/// indices use a fixed base name (e.g., `company.idx` or `company.gz`) within a quarter folder.
 #[derive(Debug, Clone, Copy)]
 pub enum EdgarDate {
     Day(EdgarDay),
-    Period(), // Unused for now
+    Period(),
 }
 
 impl From<EdgarDay> for EdgarDate {
@@ -233,29 +272,8 @@ impl From<EdgarPeriod> for EdgarDate {
     }
 }
 
-/// Represents a specific period in EDGAR filings, consisting of a year and quarter
-///
-/// # Examples
-/// ```
-/// use your_crate::EdgarPeriod;
-/// use your_crate::Quarter;
-///
-/// let period = EdgarPeriod::new(2023, Quarter::Q1).unwrap();
-/// assert_eq!(period.year(), 2023);
-/// ```
-///
 impl EdgarPeriod {
-    /// Creates a new EdgarPeriod instance
-    ///
-    /// # Arguments
-    /// * `year` - The year of the period (must be 1994 or later)
-    /// * `quarter` - The quarter of the period
-    ///
-    /// # Returns
-    /// * `Result<EdgarPeriod>` - Ok with the new instance if valid, Err if year is before 1994
-    ///
-    /// # Errors
-    /// Returns `EdgarError::InvalidYear` if the year is before 1994
+    /// Creates a new EdgarPeriod (year must be >= 1994).
     pub fn new(year: i32, quarter: Quarter) -> Result<Self> {
         if year < 1994 {
             return Err(EdgarError::InvalidYear);
@@ -263,76 +281,27 @@ impl EdgarPeriod {
         Ok(Self { year, quarter })
     }
 
-    /// Returns the year of this EdgarPeriod
+    /// Returns the year of this period.
     pub fn year(&self) -> i32 {
         self.year
     }
 
-    /// Returns the quarter of this EdgarPeriod
+    /// Returns the quarter of this period.
     pub fn quarter(&self) -> Quarter {
         self.quarter
     }
 }
 
-/// Helper module for interacting with the EDGAR (Electronic Data Gathering, Analysis, and Retrieval) system.
-///
-/// This implementation provides functionality to:
-/// - Download and extract archived (.gz) and non-archived index files
-/// - Parse index files into structured data
-/// - Find specific index files based on date and type
-/// - Build and validate URLs for accessing EDGAR indices
-///
-/// # Methods
-///
-/// - `is_archive`: Determines if a file is an archive based on its extension
-/// - `extract_archive`: Extracts content from a .gz archive
-/// - `download_file`: Downloads and optionally extracts a file from EDGAR
-/// - `find_index_file`: Locates an index file in a directory listing
-/// - `build_index_url`: Constructs URLs for EDGAR index files
-/// - `fetch_index`: Retrieves index data from EDGAR
-/// - `download_and_parse_index`: Downloads and parses an index file
-/// - `apply_filters`: Filters index entries based on options
-///
-/// # Examples
-///
-/// ```
-/// # use your_crate::Edgar;
-/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-/// let edgar = Edgar::new();
-///
-/// // Download and parse a daily index
-/// let entries = edgar.download_and_parse_index(
-///     "https://www.sec.gov/Archives/edgar/daily-index/2023/QTR3/company.20230815.idx",
-///     "company.20230815.idx"
-/// ).await?;
-///
-/// // Fetch quarterly index information
-/// let index_response = edgar.fetch_index("company", Some(2023), Some(3)).await?;
-/// # Ok(())
-/// # }
-/// ```
-///
-/// # Note
-///
-/// - EDGAR archives are available from 1994 onwards
-/// - Quarterly data is divided into QTR1 through QTR4
-/// - Index files can be either compressed (.gz) or uncompressed (.idx)
-/// - The system supports both daily and quarterly index retrievals
-///
-/// # Errors
-///
-/// Returns error in cases of:
-/// - Invalid year (< 1994)
-/// - Invalid quarter (not 1-4)
-/// - Network issues
-/// - File parsing problems
-/// - Invalid UTF-8 encoding in response content
 impl Edgar {
-    /// Only consider .gz files as archives
+    /// Returns `true` if the index file is gzipped (`.gz`).
     fn is_archive(filename: &str) -> bool {
         filename.ends_with(".gz")
     }
 
+    /// Converts raw bytes into UTF-8 text, transparently decompressing `.gz` inputs.
+    ///
+    /// EDGAR hosts index files both as plain text (`.idx`) and gzipped (`.gz`). The parsing
+    /// layer expects text, so this helper normalizes both variants into a `String`.
     async fn extract_archive(&self, content: Vec<u8>, filename: &str) -> Result<String> {
         if filename.ends_with(".gz") {
             let mut decoder = GzDecoder::new(&content[..]);
@@ -344,6 +313,11 @@ impl Edgar {
         }
     }
 
+    /// Downloads an index file as text.
+    ///
+    /// Callers tell this function whether the target is an archive so we can choose between
+    /// `get_bytes()` (for `.gz`) and `get()` (for plain text). This keeps HTTP handling centralized
+    /// and makes the rest of the index pipeline operate on strings.
     async fn download_file(&self, url: &str, is_archive: bool) -> Result<String> {
         if is_archive {
             let bytes = self.get_bytes(url).await?;
@@ -372,6 +346,12 @@ impl Edgar {
         Ok(parser.parse(content.as_bytes())?)
     }
 
+    /// Picks the most appropriate index file from a directory listing.
+    ///
+    /// For daily indices, EDGAR includes the date in the filename (e.g., `company.20230815.idx`).
+    /// For quarterly indices, the filename is stable within a quarter folder (e.g., `company.idx`).
+    ///
+    /// When both `.gz` and `.idx` are present, we prefer `.gz` first.
     fn find_index_file<'a>(
         items: &'a [DirectoryItem],
         date: impl Into<EdgarDate>,
@@ -410,6 +390,14 @@ impl Edgar {
         None
     }
 
+    /// Builds the `index.json` URL used to list available index files.
+    ///
+    /// The SEC exposes directory listings as JSON at predictable locations:
+    /// - `.../<daily|full>-index/index.json` (top level)
+    /// - `.../<daily|full>-index/<YEAR>/index.json`
+    /// - `.../<daily|full>-index/<YEAR>/QTR<1-4>/index.json`
+    ///
+    /// This helper centralizes that formatting and keeps the validation logic in `fetch_index()`.
     fn build_index_url(
         &self,
         index_type: &str,
@@ -446,6 +434,10 @@ impl Edgar {
         Ok(url)
     }
 
+    /// Fetches and parses a SEC `index.json` directory listing.
+    ///
+    /// This performs basic input validation (year >= 1994, quarter in 1..=4), then downloads and
+    /// deserializes the listing into [`IndexResponse`].
     async fn fetch_index(
         &self,
         index_type: &str,
@@ -463,6 +455,10 @@ impl Edgar {
         }
     }
 
+    /// Applies `FilingOptions` filters to parsed index entries.
+    ///
+    /// This filter stage is intentionally simple: it operates on already-parsed `IndexEntry` values,
+    /// matching form types (exact string match after trimming), CIKs, and then applying offset/limit.
     fn apply_filters(&self, mut entries: Vec<IndexEntry>, opts: &FilingOptions) -> Vec<IndexEntry> {
         // Filter by form types if specified
         if let Some(ref form_types) = opts.form_types {
@@ -488,44 +484,41 @@ impl Edgar {
     }
 }
 
-/// Operations for interacting with EDGAR index files
+/// Operations for interacting with EDGAR index files.
 ///
-/// This trait defines the core operations for retrieving filing indices from the SEC EDGAR system.
-/// It supports both daily and quarterly (periodic) filing retrievals, as well as directory listings.
+/// The index endpoints are designed for “what was filed on a date/quarter?” workflows.
+/// Both `get_daily_filings` and `get_period_filings` return parsed [`IndexEntry`] values
+/// which can then be fed into your own ingestion/download pipeline.
 ///
-/// # Index Types
-///
-/// - Daily Index: Contains filings for a specific day
-/// - Full Index: Contains quarterly compilations of filings
-/// - Company Index: Most commonly used, contains company filing information
-/// - Crawler Index: Alternative format with additional metadata
-/// - Master Index: Comprehensive quarterly index
+/// Internally, edgarkit downloads either a plain-text `.idx` file or a gzipped `.gz` file,
+/// then parses it using `parsers::index`.
 ///
 /// # Examples
 ///
-/// ```rust
-/// use edgar::{Edgar, IndexOperations, EdgarDay, EdgarPeriod, Quarter, IndexType};
+/// ```ignore
+/// use edgarkit::{Edgar, EdgarDay, EdgarPeriod, FilingOptions, IndexOperations, Quarter};
 ///
 /// #[tokio::main]
 /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
-///     let edgar = Edgar::new("example@email.com")?;
+///     let edgar = Edgar::new("MyApp contact@example.com")?;
 ///
-///     // Get daily filings
 ///     let day = EdgarDay::new(2023, 8, 15)?;
-///     let daily = edgar.get_daily_filings(day, Some(IndexType::Company)).await?;
+///     let opts = FilingOptions::new().with_form_type("10-K".to_string());
+///     let daily = edgar.get_daily_filings(day, Some(opts)).await?;
 ///
-///     // Get quarterly filings
 ///     let period = EdgarPeriod::new(2023, Quarter::Q3)?;
-///     let quarterly = edgar.get_period_filings(period, Some(IndexType::Company)).await?;
+///     let quarterly = edgar.get_period_filings(period, None).await?;
 ///
-///     // Get directory listing
-///     let listing = edgar.daily_index(Some(period)).await?;
+///     println!("daily={}, quarterly={}", daily.len(), quarterly.len());
 ///     Ok(())
 /// }
 /// ```
 #[async_trait]
 impl IndexOperations for Edgar {
     /// Retrieves filings for a specific day
+    ///
+    /// This downloads the appropriate daily index file for the given day and returns the
+    /// parsed entries. If `options` are provided, they are applied in-memory after parsing.
     ///
     /// # Arguments
     /// * `day` - The specific day to retrieve filings for
@@ -570,6 +563,9 @@ impl IndexOperations for Edgar {
 
     /// Retrieves filings for a specific quarter
     ///
+    /// This downloads the quarterly “full index” file for the given period and returns the
+    /// parsed entries. If `options` are provided, they are applied in-memory after parsing.
+    ///
     /// # Arguments
     /// * `period` - The year and quarter to retrieve filings for
     /// * `options` - Optional filing options
@@ -611,13 +607,7 @@ impl IndexOperations for Edgar {
         Ok(entries)
     }
 
-    /// Retrieves directory listing for daily indices
-    ///
-    /// # Arguments
-    /// * `period` - Optional period to get listing for (if None, returns root listing)
-    ///
-    /// # Returns
-    /// Directory structure containing available index files and subdirectories
+    /// Retrieves directory listing for daily indices.
     async fn daily_index(&self, period: Option<EdgarPeriod>) -> Result<IndexResponse> {
         match period {
             Some(p) => {
@@ -628,13 +618,7 @@ impl IndexOperations for Edgar {
         }
     }
 
-    /// Retrieves directory listing for full (quarterly) indices
-    ///
-    /// # Arguments
-    /// * `period` - Optional period to get listing for (if None, returns root listing)
-    ///
-    /// # Returns
-    /// Directory structure containing available index files and subdirectories
+    /// Retrieves directory listing for full (quarterly) indices.
     async fn full_index(&self, period: Option<EdgarPeriod>) -> Result<IndexResponse> {
         match period {
             Some(p) => {
