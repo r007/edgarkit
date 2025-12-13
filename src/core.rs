@@ -18,86 +18,106 @@ type Governor = RateLimiter<NotKeyed, InMemoryState, DefaultClock, NoOpMiddlewar
 
 #[derive(Debug, Clone)]
 pub struct Edgar {
+    /// HTTP client for making requests
     pub(crate) client: reqwest::Client,
+
+    /// Token bucket rate limiter for SEC compliance
     pub(crate) rate_limiter: Arc<Governor>,
+
+    /// Base URL for EDGAR archives
     pub(crate) edgar_archives_url: String,
+
+    /// Base URL for EDGAR data API
     pub(crate) edgar_data_url: String,
+
+    /// Base URL for EDGAR files
     pub(crate) edgar_files_url: String,
+
+    /// Base URL for EDGAR search endpoint
     pub(crate) edgar_search_url: String,
 }
 
-/// A client for interacting with the SEC EDGAR API that handles rate limiting and HTTP requests.
+/// HTTP client for accessing the SEC EDGAR API with built-in rate limiting and retry logic.
 ///
-/// The `Edgar` client provides methods to interact with different parts of the SEC EDGAR system,
-/// including archives, data, and files. It implements rate limiting and automatic retries with exponential
-/// backoff to comply with SEC's access requirements and handles HTTP requests with appropriate error handling.
+/// The `Edgar` client serves as the main entry point for interacting with the SEC's Electronic
+/// Data Gathering, Analysis, and Retrieval (EDGAR) system. It provides a safe, compliant way to
+/// access company filings, financial data, search capabilities, RSS feeds, and filing indices.
+///
+/// This client automatically handles SEC.gov's fair access requirements by implementing rate
+/// limiting, respects server-side rate limit responses with exponential backoff, and includes
+/// retry logic for transient network failures. All operations are async and designed to work
+/// seamlessly with tokio or other async runtimes.
 ///
 /// # Rate Limiting
 ///
-/// The client implements a token bucket algorithm for rate limiting requests and automatic retries with
-/// exponential backoff to comply with SEC's guidelines. By default, it's set to 10 requests per second
-/// but can be customized through the configuration.
+/// The SEC requires that automated systems respect fair access guidelines, limiting requests to
+/// no more than 10 per second. This client uses a token bucket algorithm to enforce this limit:
 ///
-/// # Configuration
+/// ```text
+/// Token Bucket (capacity: 10 tokens)
+/// ┌──────────────────────────┐
+/// │ ████████████████████████ │  ← Tokens refill at 10/sec
+/// └──────────────────────────┘
+///      ↓ consume on request
+/// ```
 ///
-/// The client can be configured with:
-/// - Custom user agent string (required by SEC)
-/// - Rate limiting parameters
-/// - Request timeout settings
-/// - Custom base URLs for different EDGAR services
+/// When the bucket is empty, requests automatically wait until tokens become available. This
+/// ensures compliance without requiring manual throttling in your application code.
 ///
 /// # Error Handling
 ///
-/// The client handles various HTTP status codes and network errors, including:
-/// - 404 Not Found
-/// - 429 Too Many Requests
-/// - Network timeouts and connection errors
+/// The client gracefully handles various error conditions including network failures, rate limit
+/// responses (HTTP 429), resource not found (HTTP 404), and invalid responses. Transient errors
+/// trigger automatic retries with exponential backoff and jitter to prevent thundering herd issues.
 ///
 /// # Examples
 ///
-/// Basic usage with default configuration:
+/// Basic client initialization:
+///
 /// ```rust
-/// let edgar = Edgar::new("my_app/1.0 (my@email.com)").expect("Failed to create EDGAR client");
+/// # use edgarkit::Edgar;
+/// let edgar = Edgar::new("my_app/1.0 (my@email.com)")?;
+/// # Ok::<(), edgarkit::EdgarError>(())
 /// ```
 ///
-/// Custom configuration:
+/// With custom configuration:
+///
 /// ```rust
+/// # use edgarkit::{Edgar, EdgarConfig, EdgarUrls};
+/// # use std::time::Duration;
 /// let config = EdgarConfig {
 ///     user_agent: "custom_app/2.0".to_string(),
 ///     rate_limit: 5,
 ///     timeout: Duration::from_secs(60),
 ///     base_urls: EdgarUrls::default(),
 /// };
-/// let edgar = Edgar::with_config(config).expect("Failed to create EDGAR client");
+/// let edgar = Edgar::with_config(config)?;
+/// # Ok::<(), edgarkit::EdgarError>(())
 /// ```
-///
-/// # Errors
-///
-/// Operations can fail with `EdgarError` for various reasons:
-/// - Configuration errors (invalid user agent, rate limit)
-/// - Network request failures
-/// - Rate limit exceeded
-/// - Invalid responses from the EDGAR service
 impl Edgar {
-    /// Creates a new instance of the Edgar client with default configuration.
+    /// Creates a new Edgar client with sensible defaults for most use cases.
+    ///
+    /// This constructor initializes the client with a rate limit of 10 requests per second
+    /// (as required by SEC.gov), a 30-second timeout for HTTP requests, and the standard
+    /// SEC.gov base URLs. The user agent you provide will be sent with every request to
+    /// identify your application to the SEC.
     ///
     /// # Arguments
     ///
-    /// * `user_agent` - A string representing the user agent to be used in the HTTP requests.
-    ///                  Should follow SEC's format requirements: "name+email"
+    /// * `user_agent` - A descriptive identifier for your application, following the format
+    ///   "AppName/Version (contact@email.com)". The SEC requires this to contact you if
+    ///   your application causes issues. Be honest and provide valid contact information.
     ///
     /// # Returns
     ///
-    /// * `Result<Self>` - A `Result` containing the new `Edgar` instance if successful,
-    ///                    or an `EdgarError` if an error occurs.
+    /// Returns a configured `Edgar` client ready to make requests, or an error if the
+    /// user agent string is invalid or the HTTP client cannot be constructed.
     ///
     /// # Example
     ///
-    /// ```rust
-    /// use etl::src::edgar::Edgar;
-    ///
-    /// let edgar = Edgar::new("my_app/1.0 (<EMAIL>)");
-    /// assert!(edgar.is_ok());
+    /// ```ignore
+    /// use edgarkit::Edgar;
+    /// let edgar = Edgar::new("my_app/1.0 (email@example.com)")?;
     /// ```
     pub fn new(user_agent: &str) -> Result<Self> {
         let config = EdgarConfig {
@@ -109,23 +129,37 @@ impl Edgar {
         Self::with_config(config)
     }
 
-    /// Creates a new instance of the Edgar client with custom configuration.
+    /// Creates an Edgar client with custom configuration settings.
+    ///
+    /// Use this constructor when you need to customize the rate limit, timeout duration,
+    /// or base URLs. This is useful for testing with mock servers, adjusting performance
+    /// characteristics for your use case, or complying with different rate limit policies.
     ///
     /// # Arguments
     ///
-    /// * `config` - Custom configuration for the Edgar client including user agent,
-    ///             rate limits, timeout, and base URLs.
-    ///
-    /// # Returns
-    ///
-    /// * `Result<Self>` - A `Result` containing the configured Edgar instance or an error.
+    /// * `config` - An `EdgarConfig` struct containing your custom settings including user
+    ///   agent, rate limit (requests per second), HTTP timeout, and base URLs for the
+    ///   various EDGAR services.
     ///
     /// # Errors
     ///
-    /// Returns `EdgarError::ConfigError` if:
-    /// - The user agent is invalid
-    /// - The HTTP client fails to build
-    /// - The rate limit is zero
+    /// Returns `EdgarError::ConfigError` if the user agent is malformed, the rate limit
+    /// is zero, or the HTTP client cannot be built with the provided configuration.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// use edgarkit::{Edgar, EdgarConfig, EdgarUrls};
+    /// use std::time::Duration;
+    ///
+    /// let config = EdgarConfig {
+    ///     user_agent: "research_tool/1.0".to_string(),
+    ///     rate_limit: 5,  // More conservative rate
+    ///     timeout: Duration::from_secs(60),
+    ///     base_urls: EdgarUrls::default(),
+    /// };
+    /// let edgar = Edgar::with_config(config)?;
+    /// ```
     pub fn with_config(config: EdgarConfig) -> Result<Self> {
         let mut headers = HeaderMap::new();
         headers.insert(
@@ -156,16 +190,22 @@ impl Edgar {
         })
     }
 
-    /// Calculates the exponential backoff duration for retrying requests.
+    /// Calculates the wait duration for retry attempts using exponential backoff with jitter.
+    ///
+    /// This implements a standard exponential backoff strategy where each retry waits longer
+    /// than the previous attempt: 1s, 2s, 4s, 8s, 16s. Random jitter (±20%) is added to
+    /// prevent the "thundering herd" problem where many clients retry simultaneously and
+    /// overwhelm the server again.
+    ///
+    /// The formula is: `(2^retry × 1000ms) ± 20%`
     ///
     /// # Arguments
     ///
-    /// * `retry` - The current retry attempt number
+    /// * `retry` - The retry attempt number (0-indexed, so first retry is 0)
     ///
     /// # Returns
     ///
-    /// A `Duration` representing the time to wait before the next retry,
-    /// including a random jitter of ±20% to prevent thundering herd problems.
+    /// A `Duration` indicating how long to wait before the next retry attempt.
     fn calculate_backoff(retry: u32) -> Duration {
         let backoff_ms = INITIAL_BACKOFF_MS * (2_u64.pow(retry));
         // Add some jitter (±20% of the calculated backoff)
@@ -173,28 +213,32 @@ impl Edgar {
         Duration::from_millis((backoff_ms as i64 + jitter) as u64)
     }
 
-    /// Sends a GET request to the specified URL with rate limiting and retry logic for retrieving bytes.
+    /// Fetches binary data from a URL with automatic rate limiting and retry logic.
     ///
-    /// # Parameters
+    /// This method is designed for downloading binary files like zip archives or PDF documents
+    /// from the SEC EDGAR system. It respects rate limits, automatically retries on transient
+    /// failures and rate limit responses (HTTP 429), and returns the raw bytes for further
+    /// processing by your application.
     ///
-    /// * `url` - A string slice representing the URL to send the GET request to.
+    /// The method will retry up to 5 times for rate limit errors (429) or network failures,
+    /// using exponential backoff with jitter between attempts. Other HTTP errors like 404
+    /// or 403 are returned immediately without retry.
+    ///
+    /// # Arguments
+    ///
+    /// * `url` - The fully-qualified URL to fetch
     ///
     /// # Returns
     ///
-    /// * `Result<Vec<u8>>` - On success, returns a `Result` containing a vector of bytes representing the response body.
-    ///   On failure, returns an `EdgarError` indicating the type of error that occurred.
+    /// Returns a `Vec<u8>` containing the response body, or an `EdgarError` if the request
+    /// fails after all retries or encounters a non-retryable error.
     ///
     /// # Errors
     ///
-    /// Returns various `EdgarError` variants depending on the failure:
-    /// - `RequestError` for network/HTTP errors
-    /// - `NotFound` for 404 responses
-    /// - `RateLimitExceeded` after maximum retries
-    /// - `InvalidResponse` for unexpected status codes
-    ///
-    /// # Rate Limiting
-    ///
-    /// Implements a token bucket algorithm for rate limiting and exponential backoff with jitter for rate limit responses (HTTP 429).
+    /// * `EdgarError::NotFound` - The resource doesn't exist (HTTP 404)
+    /// * `EdgarError::RateLimitExceeded` - Rate limit responses persisted after max retries
+    /// * `EdgarError::RequestError` - Network failure or other HTTP errors
+    /// * `EdgarError::InvalidResponse` - Unexpected HTTP status code
     pub async fn get_bytes(&self, url: &str) -> Result<Vec<u8>> {
         let mut retries = 0;
 
@@ -238,53 +282,44 @@ impl Edgar {
         }
     }
 
-    /// Sends a GET request to the specified URL with rate limiting and retry logic.
+    /// Fetches text content from a URL with rate limiting, retries, and content-type validation.
+    ///
+    /// This is the primary method for retrieving text-based resources from the SEC EDGAR system,
+    /// including JSON data, HTML filings, and XML feeds. It automatically enforces rate limits,
+    /// retries failed requests with exponential backoff, and validates content types for JSON
+    /// endpoints to catch server errors early.
+    ///
+    /// # Content-Type Validation
+    ///
+    /// For URLs ending in `.json`, the method validates that the response isn't HTML (which
+    /// typically indicates an error page). The SEC sometimes returns JSON with a `text/html`
+    /// content-type header, so the method also checks if the body looks like JSON. If it's
+    /// actually HTML, an `UnexpectedContentType` error is returned with a preview of the
+    /// content for debugging.
+    ///
+    /// # Retry Behavior
+    ///
+    /// - **Rate limits (429)**: Retries up to 5 times, respecting `Retry-After` headers when
+    ///   present, otherwise using exponential backoff
+    /// - **Network errors**: Retries up to 5 times with exponential backoff  
+    /// - **Other HTTP errors**: No retry, returns immediately
+    /// - **Content-type mismatches**: No retry, returns immediately
     ///
     /// # Arguments
     ///
-    /// * `url` - The URL to send the GET request to
+    /// * `url` - The fully-qualified URL to fetch
     ///
     /// # Returns
     ///
-    /// * `Result<String>` - The response body as a string if successful
+    /// Returns the response body as a `String`, or an error if the request fails.
     ///
     /// # Errors
     ///
-    /// Returns various `EdgarError` variants depending on the failure:
-    /// - `RequestError` for network/HTTP errors
-    /// - `NotFound` for 404 responses
-    /// - `RateLimitExceeded` after maximum retries for rate limiting
-    /// - `InvalidResponse` for unexpected status codes with response preview
-    /// - `UnexpectedContentType` when a JSON endpoint returns HTML content
-    ///
-    /// # Content Type Validation
-    ///
-    /// For URLs ending with ".json", this method validates that the response
-    /// Content-Type is not "text/html". If HTML is detected (regardless of HTTP
-    /// status code), it returns `UnexpectedContentType` with a preview of the
-    /// HTML content. This prevents downstream JSON parsing errors when servers
-    /// return HTML error pages instead of expected JSON responses.
-    ///
-    /// # Rate Limiting
-    ///
-    /// Implements a token bucket algorithm for rate limiting and exponential
-    /// backoff with jitter for rate limit responses (HTTP 429). The method
-    /// respects "retry-after" headers when present, falling back to calculated
-    /// exponential backoff otherwise.
-    ///
-    /// # Retry Logic
-    ///
-    /// - Rate limit errors (429): Retries up to `MAX_RETRIES` times with backoff
-    /// - Network errors: Retries up to `MAX_RETRIES` times with backoff
-    /// - Other HTTP errors: No retry, immediate error return
-    /// - Content type mismatches: No retry, immediate error return
-    ///
-    /// # Logging
-    ///
-    /// Logs warnings for:
-    /// - Rate limit retries with attempt count and wait duration
-    /// - Network error retries with error details and attempt count
-    /// - Content type mismatches with response preview
+    /// * `EdgarError::UnexpectedContentType` - JSON URL returned HTML content
+    /// * `EdgarError::NotFound` - Resource doesn't exist (HTTP 404)
+    /// * `EdgarError::RateLimitExceeded` - Max retries exhausted for rate limits
+    /// * `EdgarError::RequestError` - Network or HTTP errors
+    /// * `EdgarError::InvalidResponse` - Unexpected status codes with content preview
     pub async fn get(&self, url: &str) -> Result<String> {
         let mut retries = 0;
 
