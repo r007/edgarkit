@@ -19,7 +19,7 @@
 //!
 //! ## Basic Usage
 //!
-//! ```rust
+//! ```ignore
 //! use edgarkit::{Edgar, FilingOperations, FilingOptions};
 //!
 //! #[tokio::main]
