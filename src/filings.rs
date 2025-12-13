@@ -1,3 +1,18 @@
+//! Company submissions, filing metadata, and filing content.
+//!
+//! EDGAR exposes a few different layers of filing data:
+//! - **Submissions** (`/submissions/CIK##########.json`): a company-centric view that includes
+//!   entity metadata plus a “recent filings” table.
+//! - **Directory listings** (`/Archives/edgar/data/.../index.json`): a filing-centric view of the
+//!   files that make up a specific submission (HTML, XML, exhibits, XBRL, etc.).
+//! - **File content** (`/Archives/edgar/data/.../<filename>`): the actual primary document and
+//!   related artifacts.
+//!
+//! The `FilingOperations` implementation in this module is designed for the common workflow:
+//! resolve a CIK → list or filter filings → download a specific document. Filtering supports
+//! form-type matching and can optionally include amendments (e.g., treating `10-K` as
+//! `10-K` + `10-K/A`).
+
 use super::Edgar;
 use super::error::{EdgarError, Result};
 use super::options::FilingOptions;
@@ -7,79 +22,148 @@ use chrono::{DateTime, FixedOffset};
 use serde::Deserialize;
 use serde_json;
 
+/// A company's submissions payload (`/submissions/CIK##########.json`).
+///
+/// This is the primary metadata response for company-centric filing history. It includes a
+/// “recent filings” section represented as parallel arrays, plus references to older filing
+/// files when applicable.
 #[derive(Debug, Clone, Deserialize)]
 pub struct Submission {
+    /// Zero-padded CIK (e.g., "0000320193")
     pub cik: String,
+
+    /// Entity type (e.g., operating, investment)
     #[serde(rename = "entityType")]
     pub entity_type: String,
+
+    /// Standard Industrial Classification code
     pub sic: String,
+
+    /// Human-readable SIC description
     #[serde(rename = "sicDescription")]
     pub sic_description: String,
-    /// Owner organization type
+
+    /// Owner org type for insiders/issuers
     #[serde(rename = "ownerOrg")]
     pub owner_org: Option<String>,
+
+    /// Insider transactions for owner
     #[serde(rename = "insiderTransactionForOwnerExists")]
     pub insider_transaction_for_owner_exists: i32,
+
+    /// Insider transactions for issuer
     #[serde(rename = "insiderTransactionForIssuerExists")]
     pub insider_transaction_for_issuer_exists: i32,
+
+    /// Conformed company name
     pub name: String,
+
+    /// Exchange tickers (usually 1)
     pub tickers: Vec<String>,
+
+    /// Exchanges for tickers, each corresponding to `tickers`
     pub exchanges: Vec<Option<String>>,
+
+    /// Employer Identification Number
     pub ein: Option<String>,
+
     /// Legal Entity Identifier
     pub lei: Option<String>,
+
+    /// Business description
     pub description: Option<String>,
+
+    /// Company website
     pub website: Option<String>,
+
     /// Investor relations website
     #[serde(rename = "investorWebsite")]
     pub investor_website: Option<String>,
+
+    /// Investment company flag/category
     #[serde(rename = "investmentCompany")]
     pub investment_company: Option<String>,
+
+    /// Category (e.g., Large Accelerated Filer)
     pub category: Option<String>,
+
+    /// Fiscal year end (e.g., 1231)
     #[serde(rename = "fiscalYearEnd")]
     pub fiscal_year_end: Option<String>,
+
+    /// State code of incorporation
     #[serde(rename = "stateOfIncorporation")]
     pub state_of_incorporation: String,
+
+    /// State full name
     #[serde(rename = "stateOfIncorporationDescription")]
     pub state_of_incorporation_description: String,
+
+    /// Mailing and business addresses
     pub addresses: Addresses,
+
+    /// Company phone
     pub phone: String,
+
+    /// Misc flags
     pub flags: String,
+
+    /// Historical names
     #[serde(rename = "formerNames")]
     pub former_names: Vec<FormerName>,
+
+    /// Recent filings data
     pub filings: FilingsData,
 }
 
+/// Mailing and business addresses for an entity.
 #[derive(Debug, Clone, Deserialize)]
 pub struct Addresses {
     pub mailing: Address,
     pub business: Address,
 }
 
+/// A single address record in a `Submission` payload.
 #[derive(Debug, Clone, Deserialize)]
 pub struct Address {
+    /// Street line 1
     pub street1: String,
+
+    /// Street line 2
     pub street2: Option<String>,
+
+    /// City
     pub city: String,
+
+    /// State or country code
     #[serde(rename = "stateOrCountry")]
     pub state_or_country: Option<String>,
+
+    /// Postal code
     #[serde(rename = "zipCode")]
     pub zip_code: Option<String>,
+
+    /// Human-readable state or country
     #[serde(rename = "stateOrCountryDescription")]
     pub state_or_country_description: Option<String>,
-    /// For foreign addresses
+
+    /// Foreign address flag
     #[serde(rename = "isForeignLocation")]
     pub is_foreign_location: Option<i32>,
-    /// For foreign addresses
+
+    /// Foreign state/territory name
     #[serde(rename = "foreignStateTerritory")]
     pub foreign_state_territory: Option<String>,
-    /// Country name for foreign addresses
+
+    /// Country name
     pub country: Option<String>,
-    /// Country code for foreign addresses
+
+    /// ISO country code
     #[serde(rename = "countryCode")]
     pub country_code: Option<String>,
 }
 
+/// A historical company name and the date range it was used.
 #[derive(Debug, Clone, Deserialize)]
 pub struct FormerName {
     pub name: String,
@@ -87,74 +171,144 @@ pub struct FormerName {
     pub to: String,
 }
 
+/// Filing history container in a `Submission` payload.
 #[derive(Debug, Clone, Deserialize)]
 pub struct FilingsData {
     pub recent: RecentFilings,
     pub files: Vec<FilingFile>,
 }
 
+/// Metadata for an older filing file segment referenced by a `Submission` payload.
 #[derive(Debug, Clone, Deserialize)]
 pub struct FilingFile {
     pub name: String,
+
     #[serde(rename = "filingCount")]
     pub filing_count: u64,
+
     #[serde(rename = "filingFrom")]
     pub filing_from: String,
+
     #[serde(rename = "filingTo")]
     pub filing_to: String,
 }
 
+/// “Recent filings” table from the submissions endpoint.
+///
+/// The SEC represents this data as parallel arrays (e.g., `accessionNumber[i]`, `form[i]`,
+/// `filingDate[i]`) rather than a list of objects. Use `get_recent_filings` to convert this into
+/// a list of [`DetailedFiling`] values.
 #[derive(Debug, Clone, Deserialize)]
 pub struct RecentFilings {
+    /// EDGAR accession numbers
     #[serde(rename = "accessionNumber")]
     pub accession_number: Vec<String>,
+
+    /// Filing dates (YYYY-MM-DD)
     #[serde(rename = "filingDate")]
     pub filing_date: Vec<String>,
+
+    /// Report dates if provided
     #[serde(rename = "reportDate")]
     pub report_date: Option<Vec<String>>,
+
+    /// EDGAR acceptance timestamps
     #[serde(rename = "acceptanceDateTime")]
     pub acceptance_date_time: Vec<String>,
+
+    /// Securities Act references (e.g., 33, 34)
     pub act: Option<Vec<String>>,
+
+    /// Form types (e.g., 10-K, 8-K)
     pub form: Vec<String>,
+
+    /// File numbers, may be empty
     #[serde(rename = "fileNumber")]
     pub file_number: Option<Vec<String>>,
+
+    /// Film numbers, may be empty
     #[serde(rename = "filmNumber")]
     pub film_number: Option<Vec<String>>,
+
+    /// 8-K items strings (e.g., "1.01,2.03,5.01")
     pub items: Option<Vec<String>>,
+
+    /// Document sizes in bytes
     pub size: Vec<i32>,
+
+    /// XBRL flags (1 = has XBRL, 0 = no XBRL)
     #[serde(rename = "isXBRL")]
     pub is_xbrl: Option<Vec<i32>>,
+
+    /// Inline XBRL flags (1 = has Inline XBRL, 0 = no Inline XBRL)
     #[serde(rename = "isInlineXBRL")]
     pub is_inline_xbrl: Option<Vec<i32>>,
+
+    /// Primary document filenames
     #[serde(rename = "primaryDocument")]
     pub primary_document: Option<Vec<String>>,
+
+    /// Primary document descriptions
     #[serde(rename = "primaryDocDescription")]
     pub primary_doc_description: Option<Vec<String>>,
 }
 
+/// A normalized filing record derived from the “recent filings” table.
+///
+/// Unlike `RecentFilings`, this struct is row-oriented and easier to work with in typical Rust
+/// code. It is constructed via `TryFrom<(&RecentFilings, usize)>`.
 #[derive(Debug, Clone)]
 pub struct DetailedFiling {
+    /// EDGAR accession number
     pub accession_number: String,
+
+    /// Filing date (YYYY-MM-DD)
     pub filing_date: String,
+
+    /// Report date (if any)
     pub report_date: Option<String>,
+
+    /// EDGAR acceptance timestamp
     pub acceptance_date_time: DateTime<FixedOffset>,
+
+    /// Securities Act reference (e.g., 33, 34)
     pub act: Option<String>,
+
+    /// Form type
     pub form: String,
+
+    /// File number
     pub file_number: Option<String>,
+
+    /// Film number
     pub film_number: Option<String>,
+
+    /// 8-K items string (e.g., "1.01,2.03,5.01")
     pub items: Option<String>,
+
+    /// Document size in bytes
     pub size: i32,
+
+    /// Contains XBRL
     pub is_xbrl: bool,
+
+    /// Contains Inline XBRL
     pub is_inline_xbrl: bool,
+
+    /// Primary document filename
     pub primary_document: Option<String>,
+
+    /// Primary document description
     pub primary_doc_description: Option<String>,
 }
 
+/// Response wrapper for EDGAR `index.json` directory listings.
 #[derive(Debug, Clone, Deserialize)]
 pub struct DirectoryResponse {
     pub directory: Directory,
 }
 
+/// Directory listing payload for filings and entities.
 #[derive(Debug, Clone, Deserialize)]
 pub struct Directory {
     pub item: Vec<DirectoryItem>,
@@ -163,6 +317,7 @@ pub struct Directory {
     pub parent_dir: String,
 }
 
+/// A file entry inside a directory listing.
 #[derive(Debug, Clone, Deserialize)]
 pub struct DirectoryItem {
     #[serde(rename = "last-modified")]
@@ -304,68 +459,60 @@ impl Edgar {
     }
 }
 
-/// Implementation of filing operations for the Edgar system.
+/// Filing operations for EDGAR submissions and filing content.
 ///
-/// This implementation provides methods to interact with the SEC's EDGAR system,
-/// allowing retrieval of various filing-related data including submissions,
-/// filing directories, and filing contents.
+/// This implementation is built around the SEC “submissions” endpoint, which is the canonical
+/// source for a company’s recent filing history. The raw payload represents filings as *parallel
+/// arrays*; edgarkit converts that into a list of [`DetailedFiling`] values so it’s easy to filter,
+/// paginate, and download documents.
+///
+/// **What you typically do:**
+/// 1) Call `filings()` (or `get_recent_filings()`) to get metadata.
+/// 2) Use `filing_directory()` to discover the files for a specific accession.
+/// 3) Download the primary document with `get_latest_filing_content()` or `get_filing_content_by_id()`.
+///
+/// **Behavior notes:**
+/// - `filings()` filters in-memory and returns results in the same order as the SEC provides
+///   (typically newest-first).
+/// - When converting the SEC parallel arrays into rows, entries with invalid timestamps are
+///   skipped rather than failing the entire call.
+/// - If you filter by form types, amendments can be included automatically via
+///   [`FilingOptions::with_include_amendments`] (enabled by default).
 ///
 /// # Examples
 ///
+/// ```ignore
+/// use edgarkit::{Edgar, FilingOperations, FilingOptions};
+///
+/// #[tokio::main]
+/// async fn main() -> Result<(), Box<dyn std::error::Error>> {
+///     let edgar = Edgar::new("app contact@example.com")?;
+///
+///     // Metadata (recent filings table normalized into rows).
+///     let recent = edgar.get_recent_filings("1018724").await?;
+///
+///     // Filter by form type (includes amendments by default).
+///     let opts = FilingOptions::new().with_form_type("10-K".to_string());
+///     let only_10k = edgar.filings("1018724", Some(opts)).await?;
+///
+///     // Content (downloads the primary doc for the latest matching filing).
+///     let latest_10k_html = edgar.get_latest_filing_content("1018724", "10-K").await?;
+///     println!("recent={}, only_10k={}, bytes={}", recent.len(), only_10k.len(), latest_10k_html.len());
+///     Ok(())
+/// }
 /// ```
-/// # use your_crate::{Edgar, FilingOperations};
-/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-/// let edgar = Edgar::new();
-///
-/// // Get recent filings for a company
-/// let filings = edgar.get_recent_filings("1018724").await?;
-///
-/// // Get latest 10-K filing
-/// let latest_10k = edgar.get_latest_filing_content("1018724", "10-K").await?;
-/// # Ok(())
-/// # }
-/// ```
-///
-/// # Methods
-///
-/// - `submissions`: Retrieves submission history for a given CIK
-/// - `get_recent_filings`: Gets recent filings for a company
-/// - `filings`: Gets filtered filings based on provided options
-/// - `filing_directory`: Retrieves the filing directory for a specific filing
-/// - `entity_directory`: Gets the entity directory for a CIK
-/// - `get_filing_url`: Constructs URLs for accessing filings
-/// - `get_filing_url_from_id`: Constructs filing URLs from combined filing IDs
-/// - `get_filing_content`: Retrieves the content of a specific filing
-/// - `get_latest_filing_content`: Gets the most recent filing of a specified type
-///
-/// # Errors
-///
-/// Methods may return various error types wrapped in `Result`:
-/// - `EdgarError::NotFound`: When requested data is not found
-/// - `EdgarError::InvalidResponse`: When response data is malformed
-/// - Network-related errors during HTTP requests
 #[async_trait]
 impl FilingOperations for Edgar {
     /// Retrieves submission history for a given CIK.
     ///
-    /// This function sends an HTTP GET request to the SEC's EDGAR system to fetch the submission details
-    /// for the specified Central Index Key (CIK). The function then parses the JSON response and returns
-    /// a `Result` containing the parsed `Submission` struct.
+    /// This is the raw `submissions/CIK##########.json` payload: entity metadata plus a recent
+    /// filings table represented as parallel arrays.
     ///
-    /// # Parameters
-    ///
-    /// * `cik` - A string slice representing the Central Index Key (CIK) of the company.
-    ///
-    /// # Returns
-    ///
-    /// * `Result<Submission>` - A `Result` containing the parsed `Submission` struct if the operation is successful.
-    ///   If an error occurs, it returns an `Err` containing the error.
+    /// The SEC expects a zero-padded CIK in the URL; edgarkit handles that formatting for you.
     ///
     /// # Errors
-    ///
-    /// * `EdgarError::NotFound` - If the submission details for the given CIK are not found.
-    /// * `EdgarError::InvalidResponse` - If the response data is malformed.
-    /// * Network-related errors during HTTP requests.
+    /// Returns an error if the company is not found, the response is not valid JSON, or the
+    /// request fails.
     async fn submissions(&self, cik: &str) -> Result<Submission> {
         let url = self.build_url(UrlType::Submission, &[cik])?;
         let response = self.get(&url).await?;
@@ -374,22 +521,11 @@ impl FilingOperations for Edgar {
 
     /// Retrieves recent filings for a given CIK.
     ///
-    /// This function fetches the submission details for the given CIK,
-    /// then processes the recent filings data to create a vector of `DetailedFiling` structs.
+    /// This is a convenience wrapper around `submissions()` that normalizes the SEC “recent” table
+    /// into row-oriented [`DetailedFiling`] records.
     ///
-    /// # Parameters
-    ///
-    /// * `cik` - A string representing the Central Index Key (CIK) of the company.
-    ///
-    /// # Returns
-    ///
-    /// * `Result<Vec<DetailedFiling>>` - A `Result` containing a vector of `DetailedFiling` structs
-    ///   if the operation is successful. If an error occurs, it returns an `Err` containing the error.
-    ///
-    /// # Errors
-    ///
-    /// * `EdgarError::NotFound` - If the submission details for the given CIK are not found.
-    /// * `EdgarError::InvalidResponse` - If the submission details or recent filings data are invalid.
+    /// If a specific row has an invalid timestamp (e.g., malformed `acceptanceDateTime`), that row is
+    /// skipped; the rest of the results are returned.
     async fn get_recent_filings(&self, cik: &str) -> Result<Vec<DetailedFiling>> {
         let submission = self.submissions(cik).await?;
         let mut detailed_filings = Vec::new();
@@ -408,7 +544,9 @@ impl FilingOperations for Edgar {
     ///
     /// By default, when you request a specific form type like "S-1", this automatically includes
     /// amendments too ("S-1/A") so you get the complete picture. You can disable this with
-    /// `with_include_amendments(false)`. The filings are already sorted by date with newest first.
+    /// `with_include_amendments(false)`.
+    ///
+    /// Results are returned in the same order as the SEC submissions payload (typically newest-first).
     ///
     /// # Parameters
     ///
@@ -426,15 +564,25 @@ impl FilingOperations for Edgar {
     /// # Examples
     ///
     /// ```ignore
-    /// // This returns both S-1 and S-1/A filings (default behavior)
-    /// let opts = FilingOptions::new().with_form_type("S-1");
-    /// let filings = edgar.filings("320193", Some(opts)).await?;
+    /// use edgarkit::{Edgar, FilingOperations, FilingOptions};
     ///
-    /// // This returns only S-1 filings, excluding amendments
-    /// let opts = FilingOptions::new()
-    ///     .with_form_type("S-1")
-    ///     .with_include_amendments(false);
-    /// let filings = edgar.filings("320193", Some(opts)).await?;
+    /// #[tokio::main]
+    /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    ///     let edgar = Edgar::new("app contact@example.com")?;
+    ///
+    ///     // Returns both S-1 and S-1/A filings (default behavior).
+    ///     let opts = FilingOptions::new().with_form_type("S-1".to_string());
+    ///     let filings = edgar.filings("320193", Some(opts)).await?;
+    ///
+    ///     // Returns only S-1 filings, excluding amendments.
+    ///     let opts = FilingOptions::new()
+    ///         .with_form_type("S-1".to_string())
+    ///         .with_include_amendments(false);
+    ///     let filings_no_amends = edgar.filings("320193", Some(opts)).await?;
+    ///
+    ///     println!("with_amendments={}, without_amendments={}", filings.len(), filings_no_amends.len());
+    ///     Ok(())
+    /// }
     /// ```
     async fn filings(&self, cik: &str, opts: Option<FilingOptions>) -> Result<Vec<DetailedFiling>> {
         let mut all_filings = self.get_recent_filings(cik).await?;
@@ -474,7 +622,9 @@ impl FilingOperations for Edgar {
 
     /// Retrieves the filing directory for a specific filing.
     ///
-    /// The filing directory contains a list of files associated with a specific filing.
+    /// The filing directory is an `index.json` listing of the files that make up an accession.
+    /// Use this when you need to locate the primary document, exhibits, XBRL artifacts, or other
+    /// filenames before downloading content.
     ///
     /// # Parameters
     ///
@@ -503,7 +653,8 @@ impl FilingOperations for Edgar {
 
     /// Retrieves the entity directory for a CIK.
     ///
-    /// The entity directory contains a list of files associated with a specific company identified by its CIK.
+    /// The entity directory is an `index.json` listing at the company level. It is useful for
+    /// browsing what is present under `/Archives/edgar/data/<CIK>/`.
     ///
     /// # Parameters
     ///
@@ -527,8 +678,9 @@ impl FilingOperations for Edgar {
 
     /// Retrieves the URL for accessing a specific filing based on the combined filing ID.
     ///
-    /// The combined filing ID is expected to be in the format "accession_number:filename".
-    /// This function splits the ID into its components, then constructs the URL for accessing the filing.
+    /// `filing_id` is expected to be in the format `"<accession_number>:<filename>"`.
+    /// This is a compact way to pass around a specific document reference (for example, when
+    /// you store `IndexEntry` hits and later want to fetch a specific file).
     ///
     /// # Parameters
     ///
@@ -551,8 +703,7 @@ impl FilingOperations for Edgar {
 
     /// Retrieves the content of a specific filing based on the combined filing ID.
     ///
-    /// This function constructs the URL for accessing the filing using the provided CIK and filing ID,
-    /// then fetches the content of the filing by making an HTTP GET request to the constructed URL.
+    /// This is a convenience wrapper around `get_filing_url_from_id()` plus a download.
     ///
     /// # Parameters
     ///
@@ -572,7 +723,7 @@ impl FilingOperations for Edgar {
     ///
     /// This gets you the actual document content, not just metadata. By default, when you ask for
     /// a form type like "10-K", it includes amendments ("10-K/A") automatically and returns the
-    /// most recent one - which could be either the original or an amendment.
+    /// most recent matching filing, which could be either the original or an amendment.
     ///
     /// # Parameters
     ///
@@ -593,9 +744,17 @@ impl FilingOperations for Edgar {
     /// # Example
     ///
     /// ```ignore
-    /// // Gets the latest 10-K or 10-K/A filing
-    /// let content = edgar.get_latest_filing_content("320193", "10-K").await?;
-    /// println!("Downloaded {} bytes", content.len());
+    /// use edgarkit::{Edgar, FilingOperations};
+    ///
+    /// #[tokio::main]
+    /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    ///     let edgar = Edgar::new("app contact@example.com")?;
+    ///
+    ///     // Gets the latest 10-K or 10-K/A filing.
+    ///     let content = edgar.get_latest_filing_content("320193", "10-K").await?;
+    ///     println!("Downloaded {} bytes", content.len());
+    ///     Ok(())
+    /// }
     /// ```
     async fn get_latest_filing_content(&self, cik: &str, form_type: &str) -> Result<String> {
         let opts = FilingOptions::new().with_form_type(form_type.to_string());
@@ -614,22 +773,15 @@ impl FilingOperations for Edgar {
         self.get(&url).await
     }
 
-    /// Generates URLs for text filings with original SEC.gov links based on specified options
-    /// without downloading content
+    /// Generates download and browser links for the *text* rendition of filings.
     ///
-    /// This function fetches filings metadata for a company identified by its CIK,
-    /// filters them based on the provided options, and then generates URLs for accessing
-    /// the raw text versions of these filings.
+    /// This does not download any filing content. It returns tuples of:
+    /// - [`DetailedFiling`] metadata
+    /// - an EDGAR archives URL for the raw text file (`.../<accession>.txt`)
+    /// - an SEC.gov “index page” URL suitable for browsing in a web browser
     ///
-    /// # Parameters
-    ///
-    /// * `cik` - A string slice containing the Central Index Key (CIK) of the company
-    /// * `opts` - An optional `FilingOptions` struct that specifies filtering criteria
-    ///
-    /// # Returns
-    ///
-    /// Returns a `Result` containing a vector of tuples with (DetailedFiling, text_url, sec_gov_url).
-    /// If an error occurs during the process, it returns an `Err` variant.
+    /// Use this when you want to hand off URLs to another system (queue, downloader, UI) without
+    /// eagerly fetching the documents.
     async fn get_text_filing_links(
         &self,
         cik: &str,
@@ -651,22 +803,10 @@ impl FilingOperations for Edgar {
         Ok(links)
     }
 
-    /// Generates URLs for SGML header files with original SEC.gov links based on specified options
-    /// without downloading content
+    /// Generates download and browser links for SGML header (`.hdr.sgml`) files.
     ///
-    /// This function fetches filings metadata for a company identified by its CIK,
-    /// filters them based on the provided options, and then generates URLs for accessing
-    /// the SGML header files of these filings.
-    ///
-    /// # Parameters
-    ///
-    /// * `cik` - A string slice containing the Central Index Key (CIK) of the company
-    /// * `opts` - An optional `FilingOptions` struct that specifies filtering criteria
-    ///
-    /// # Returns
-    ///
-    /// Returns a `Result` containing a vector of tuples with (DetailedFiling, sgml_header_url, sec_gov_url).
-    /// If an error occurs during the process, it returns an `Err` variant.
+    /// Like `get_text_filing_links()`, this is a link builder: it filters filings and returns
+    /// URLs, but does not download anything.
     async fn get_sgml_header_links(
         &self,
         cik: &str,
