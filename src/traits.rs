@@ -1,3 +1,20 @@
+//! Trait definitions organizing EDGAR operations by feature area.
+//!
+//! EdgarKit uses traits to logically group related functionality into domains:
+//! company information, filings, feeds, search, and indices. Each feature has
+//! a corresponding trait that the `Edgar` client implements when that feature
+//! is enabled.
+//!
+//! This design allows for:
+//! - Clear separation of concerns
+//! - Feature-gated compilation (only include what you need)
+//! - Easy mocking and testing
+//! - Discoverable API through trait methods
+//!
+//! Users typically interact with the `Edgar` struct directly rather than through
+//! trait objects, but the traits are useful for understanding the API surface and
+//! for testing scenarios where you want to provide alternative implementations.
+
 #[cfg(feature = "company")]
 use super::company::{
     CompanyConcept, CompanyFacts, CompanyTicker, CompanyTickerExchange, Frame, MutualFundTicker,
@@ -19,11 +36,15 @@ use parsers::index::IndexEntry;
 #[cfg(feature = "feeds")]
 use parsers::rss::RssDocument;
 
-/// A collection of trait definitions for interacting with the SEC EDGAR system.
-/// These traits provide a comprehensive interface for retrieving and parsing
-/// various types of financial data and documents from the SEC EDGAR database.
-
-/// Operations related to company information retrieval from EDGAR.
+/// Operations for retrieving company information and financial data.
+///
+/// This trait provides access to SEC company identifiers (CIKs), ticker mappings,
+/// and structured financial data through the XBRL API. It covers company metadata,
+/// fact aggregations, specific concept queries, and aggregated frames across companies.
+///
+/// Company data is retrieved from SEC's data API which provides JSON-formatted
+/// company facts based on XBRL filings. This is particularly useful for financial
+/// analysis and building company databases.
 #[cfg(feature = "company")]
 #[async_trait]
 pub trait CompanyOperations {
@@ -45,7 +66,15 @@ pub trait CompanyOperations {
     async fn frames(&self, taxonomy: &str, tag: &str, unit: &str, period: &str) -> Result<Frame>;
 }
 
-/// Operations related to SEC filing retrieval and management.
+/// Operations for accessing SEC filings and related documents.
+///
+/// This trait provides comprehensive access to company filings including submissions
+/// data, filing directories, and document content. It supports retrieving recent
+/// filings, latest filings of specific types, and generating URLs for text filings
+/// and SGML headers.
+///
+/// Filing operations are the core of most EDGAR use cases, enabling you to discover
+/// what a company has filed and retrieve the actual filing documents for analysis.
 #[cfg(feature = "filings")]
 #[async_trait]
 pub trait FilingOperations {
@@ -83,7 +112,15 @@ pub trait FilingOperations {
     ) -> Result<Vec<(DetailedFiling, String, String)>>;
 }
 
-/// Operations related to EDGAR feed data retrieval.
+/// Operations for accessing EDGAR Atom and RSS feeds.
+///
+/// This trait provides methods to retrieve various SEC feeds including current filings,
+/// company-specific feeds, press releases, speeches, and specialized XBRL feeds. Feeds
+/// are useful for monitoring recent activity, tracking news, and staying updated on
+/// regulatory announcements.
+///
+/// The SEC provides both Atom feeds (for filings) and RSS feeds (for news and alerts).
+/// This trait abstracts the differences and provides a consistent interface to both.
 #[cfg(feature = "feeds")]
 #[async_trait]
 pub trait FeedOperations {
@@ -129,7 +166,15 @@ pub trait FeedOperations {
     async fn historical_xbrl_feed(&self, year: i32, month: i32) -> Result<RssDocument>;
 }
 
-/// Operations for retrieving EDGAR index files.
+/// Operations for retrieving daily and quarterly filing indices.
+///
+/// The SEC publishes index files that list all filings for a given day or quarter.
+/// These indices are useful for bulk processing, historical analysis, or discovering
+/// filings without relying on the search API. Index files are available from 1994
+/// onwards when the EDGAR system began.
+///
+/// Indices provide a lightweight way to get filing metadata without downloading full
+/// documents, making them ideal for building filing databases or monitoring systems.
 #[cfg(feature = "index")]
 #[async_trait]
 pub trait IndexOperations {
@@ -151,6 +196,15 @@ pub trait IndexOperations {
     ) -> Result<Vec<IndexEntry>>;
 }
 
+/// Operations for searching EDGAR filings with flexible criteria.
+///
+/// The search trait provides access to SEC's full-text search capabilities, allowing
+/// you to find filings by keywords, form types, dates, companies, and other attributes.
+/// It supports both single-page queries and comprehensive multi-page retrieval.
+///
+/// Search is particularly useful when you need to find filings based on content or
+/// when you don't know exact identifiers. The search system indexes filing text,
+/// metadata, and company information for comprehensive discoverability.
 #[cfg(feature = "search")]
 #[async_trait]
 pub trait SearchOperations {
