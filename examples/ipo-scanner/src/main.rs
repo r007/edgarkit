@@ -121,10 +121,8 @@ async fn fetch_rows(edgar: &Edgar, start: NaiveDate, end: NaiveDate) -> Result<V
                         continue;
                     }
 
-                    let index_html = match to_index_html_url(&entry.url) {
-                        Some(u) => u,
-                        None => continue,
-                    };
+                    // SEC “browse company” page expects a zero-padded 10-digit CIK.
+                    let index_html = format!("https://www.sec.gov/edgar/browse/?CIK={:010}", entry.cik);
 
                     if !seen.insert(index_html.clone()) {
                         continue;
@@ -155,53 +153,6 @@ async fn fetch_rows(edgar: &Edgar, start: NaiveDate, end: NaiveDate) -> Result<V
 
     rows.sort_by(|a, b| b.date_filed.cmp(&a.date_filed));
     Ok(rows)
-}
-
-fn to_index_html_url(input: &str) -> Option<String> {
-    let trimmed = input.trim();
-    if trimmed.is_empty() {
-        return None;
-    }
-
-    // Known shape from the daily index parser in this app:
-    // https://www.sec.gov/Archives/edgar/data/<CIK>/<ACC_NO_WITH_DASHES>.txt
-    // Convert to:
-    // https://www.sec.gov/Archives/edgar/data/<CIK>/<ACC_NO_NO_DASHES>/<ACC_NO_WITH_DASHES>-index.html
-    if let Some(path) = trimmed.strip_prefix("https://www.sec.gov/") {
-        return sec_txt_url_to_index_html(path);
-    }
-    if let Some(path) = trimmed.strip_prefix("http://www.sec.gov/") {
-        return sec_txt_url_to_index_html(path);
-    }
-
-    None
-}
-
-fn sec_txt_url_to_index_html(path_after_domain: &str) -> Option<String> {
-    let path = path_after_domain.trim_start_matches('/');
-    let parts: Vec<&str> = path.split('/').filter(|p| !p.is_empty()).collect();
-    let data_pos = parts.iter().position(|p| *p == "data")?;
-    let cik = *parts.get(data_pos + 1)?;
-
-    // Accept either:
-    // - data/<CIK>/<ACC>.txt
-    // - data/<CIK>/<ACC_NO_DASHES>/<ACC>.txt
-    let after_cik = &parts[(data_pos + 2)..];
-    let (acc_no_no_dashes, file) = match after_cik {
-        [file] => {
-            let acc = file.strip_suffix(".txt")?;
-            (acc.replace('-', ""), *file)
-        }
-        [folder, file, ..] => ((*folder).to_string(), *file),
-        _ => return None,
-    };
-
-    let acc_with_dashes = file.strip_suffix(".txt").unwrap_or(file);
-
-    Some(format!(
-        "https://www.sec.gov/Archives/edgar/data/{}/{}/{}-index.html",
-        cik, acc_no_no_dashes, acc_with_dashes
-    ))
 }
 
 fn human_age(today: NaiveDate, date: NaiveDate) -> String {
