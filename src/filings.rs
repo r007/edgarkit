@@ -705,7 +705,7 @@ impl FilingOperations for Edgar {
     /// # Parameters
     ///
     /// * `cik` - The company's Central Index Key
-    /// * `form_type` - The form type you want (e.g., "10-K", "S-1")
+    /// * `form_types` - One or more form types you want (e.g., `["10-Q", "10-K"]`)
     ///
     /// # Returns
     ///
@@ -727,19 +727,30 @@ impl FilingOperations for Edgar {
     /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
     ///     let edgar = Edgar::new("app contact@example.com")?;
     ///
-    ///     // Gets the latest 10-K or 10-K/A filing.
-    ///     let content = edgar.get_latest_filing_content("320193", "10-K").await?;
+    ///     // Gets the latest 10-Q/10-Q-A/10-K/10-K-A filing (newest wins).
+    ///     let content = edgar
+    ///         .get_latest_filing_content("320193", &["10-Q", "10-K"])
+    ///         .await?;
     ///     println!("Downloaded {} bytes", content.len());
     ///     Ok(())
     /// }
     /// ```
-    async fn get_latest_filing_content(&self, cik: &str, form_type: &str) -> Result<String> {
-        let opts = FilingOptions::new().with_form_type(form_type.to_string());
+    async fn get_latest_filing_content(&self, cik: &str, form_types: &[&str]) -> Result<String> {
+        if form_types.is_empty() {
+            return Err(EdgarError::InvalidResponse(
+                "form_types must not be empty".to_string(),
+            ));
+        }
+
+        let opts = FilingOptions::new()
+            .with_form_types(form_types.iter().map(|s| (*s).to_string()).collect());
         let filings = self.filings(cik, Some(opts)).await?;
 
-        // Get the first filing - it's already the most recent since filings() returns them sorted
-        // and includes amendments automatically
-        let filing = filings.first().ok_or(EdgarError::NotFound)?;
+        // filings() returns newest-first. Prefer the first filing with a primary document.
+        let filing = filings
+            .iter()
+            .find(|f| f.primary_document.is_some())
+            .ok_or(EdgarError::NotFound)?;
 
         let primary_doc = filing
             .primary_document
@@ -868,7 +879,7 @@ mod tests {
 
         // Test fetching 10-K filing
         let filing_content = edgar
-            .get_latest_filing_content("320193", "10-K")
+            .get_latest_filing_content("320193", &["10-K"])
             .await
             .unwrap();
 
@@ -877,11 +888,15 @@ mod tests {
         assert!(filing_content.len() > 1000); // Should have substantial content
 
         // Test with invalid CIK
-        let invalid_result = edgar.get_latest_filing_content("000000", "10-K").await;
+        let invalid_result = edgar
+            .get_latest_filing_content("000000", &["10-K"])
+            .await;
         assert!(matches!(invalid_result, Err(EdgarError::NotFound)));
 
         // Test with invalid form type
-        let invalid_form = edgar.get_latest_filing_content("320193", "INVALID").await;
+        let invalid_form = edgar
+            .get_latest_filing_content("320193", &["INVALID"])
+            .await;
         assert!(matches!(invalid_form, Err(EdgarError::NotFound)));
     }
 

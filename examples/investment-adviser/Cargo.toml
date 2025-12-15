@@ -1,0 +1,17 @@
+[package]
+name = "investment-adviser"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+edgarkit = { path = "../.." }
+
+anyhow = "1.0.99"
+clap = { version = "4.5.23", features = ["derive"] }
+console = "0.15.11"
+html-to-markdown-rs = "2.3.4"
+indicatif = "0.17.11"
+rig = { package = "rig-core", version = "0.21.0", features = ["reqwest-rustls"] }
+tokio = { version = "1.47.1", features = ["macros", "rt-multi-thread"] }
+
+[workspace]

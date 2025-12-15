@@ -40,7 +40,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
     // Example 2: Get the latest 10-K filing content
     println!("2. Downloading the latest 10-K filing content...");
-    let filing_content = edgar.get_latest_filing_content(cik, "10-K").await?;
+    let filing_content = edgar.get_latest_filing_content(cik, &["10-K"]).await?;
 
     println!("✓ Downloaded filing content:");
     println!("   Size: {} bytes", filing_content.len());

@@ -137,7 +137,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let edgar = Edgar::new("MyApp contact@example.com")?;
     
     // Get the latest 10-K for a company
-    let content = edgar.get_latest_filing_content("320193", "10-K").await?;
+    let content = edgar.get_latest_filing_content("320193", &["10-K"]).await?;
     
     // Save to file or process the content
     println!("Downloaded {} bytes", content.len());
