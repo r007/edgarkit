@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+  <feed xmlns="http://www.w3.org/2005/Atom">
+    <author>
+      <email>webmaster@sec.gov</email>
+      <name>Webmaster</name>
+    </author>
+    <company-info>
+      <addresses>
+        <address type="mailing">
+          <city>MIAMI</city>
+          <state>FL</state>
+          <street1>MAQUIA CAPITAL ACQUISITION CORPORATION</street1>
+          <street2>50 BISCAYNE BOULEVARD, SUITE 2406</street2>
+          <zip>33132</zip>
+        </address>
+        <address type="business">
+          <city>MIAMI</city>
+          <phone>3056081395</phone>
+          <state>FL</state>
+          <street1>MAQUIA CAPITAL ACQUISITION CORPORATION</street1>
+          <street2>50 BISCAYNE BOULEVARD, SUITE 2406</street2>
+          <zip>33132</zip>
+        </address>
+      </addresses>
+      <assigned-sic>7372</assigned-sic>
+      <assigned-sic-desc>SERVICES-PREPACKAGED SOFTWARE</assigned-sic-desc>
+      <assigned-sic-href>https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&amp;SIC=7372&amp;owner=exclude&amp;count=100</assigned-sic-href>
+      <cik>0001844419</cik>
+      <cik-href>https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&amp;CIK=0001844419&amp;owner=exclude&amp;count=100</cik-href>
+      <conformed-name>Maquia Capital Acquisition Corp</conformed-name>
+      <fiscal-year-end>1231</fiscal-year-end>
+      <formerly-names count="1">
+        <names>
+          <date>2021-02-16</date>
+          <name>Maquia Capital Acquisition Corporation</name>
+        </names>
+      </formerly-names>
+      <state-location>FL</state-location>
+      <state-location-href>https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&amp;State=FL&amp;owner=exclude&amp;count=100</state-location-href>
+      <state-of-incorporation>DE</state-of-incorporation>
+    </company-info>
+    <entry>
+      <category label="form type" scheme="https://www.sec.gov/" term="S-1/A" />
+      <content type="text/xml">
+        <accession-number>0001104659-21-057704</accession-number>
+        <act>33</act>
+        <amend>[Amend]</amend>
+        <file-number>333-253167</file-number>
+        <file-number-href>https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&amp;filenum=333-253167&amp;owner=exclude&amp;count=100</file-number-href>
+        <filing-date>2021-04-29</filing-date>
+        <filing-href>https://www.sec.gov/Archives/edgar/data/1844419/000110465921057704/0001104659-21-057704-index.htm</filing-href>
+        <filing-type>S-1/A</filing-type>
+        <film-number>21871494</film-number>
+        <form-name>General form for registration of securities under the Securities Act of 1933</form-name>
+        <size>1 MB</size>
+      </content>
+      <id>urn:tag:sec.gov,2008:accession-number=0001104659-21-057704</id>
+      <link href="https://www.sec.gov/Archives/edgar/data/1844419/000110465921057704/0001104659-21-057704-index.htm" rel="alternate" type="text/html" />
+      <summary type="html"> &lt;b&gt;Filed:&lt;/b&gt; 2021-04-29 &lt;b&gt;AccNo:&lt;/b&gt; 0001104659-21-057704 &lt;b&gt;Size:&lt;/b&gt; 1 MB</summary>
+      <title>S-1/A [Amend]  - General form for registration of securities under the Securities Act of 1933</title>
+      <updated>2021-04-29T16:45:49-04:00</updated>
+    </entry>
+    <entry>
+      <category label="form type" scheme="https://www.sec.gov/" term="S-1/A" />
+      <content type="text/xml">
+        <accession-number>0001104659-21-048133</accession-number>
+        <act>33</act>
+        <amend>[Amend]</amend>
+        <file-number>333-253167</file-number>
+        <file-number-href>https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&amp;filenum=333-253167&amp;owner=exclude&amp;count=100</file-number-href>
+        <filing-date>2021-04-08</filing-date>
+        <filing-href>https://www.sec.gov/Archives/edgar/data/1844419/000110465921048133/0001104659-21-048133-index.htm</filing-href>
+        <filing-type>S-1/A</filing-type>
+        <film-number>21815488</film-number>
+        <form-name>General form for registration of securities under the Securities Act of 1933</form-name>
+        <size>2 MB</size>
+      </content>
+      <id>urn:tag:sec.gov,2008:accession-number=0001104659-21-048133</id>
+      <link href="https://www.sec.gov/Archives/edgar/data/1844419/000110465921048133/0001104659-21-048133-index.htm" rel="alternate" type="text/html" />
+      <summary type="html"> &lt;b&gt;Filed:&lt;/b&gt; 2021-04-08 &lt;b&gt;AccNo:&lt;/b&gt; 0001104659-21-048133 &lt;b&gt;Size:&lt;/b&gt; 2 MB</summary>
+      <title>S-1/A [Amend]  - General form for registration of securities under the Securities Act of 1933</title>
+      <updated>2021-04-08T17:04:59-04:00</updated>
+    </entry>
+    <entry>
+      <category label="form type" scheme="https://www.sec.gov/" term="S-1/A" />
+      <content type="text/xml">
+        <accession-number>0001104659-21-042159</accession-number>
+        <act>33</act>
+        <amend>[Amend]</amend>
+        <file-number>333-253167</file-number>
+        <file-number-href>https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&amp;filenum=333-253167&amp;owner=exclude&amp;count=100</file-number-href>
+        <filing-date>2021-03-26</filing-date>
+        <filing-href>https://www.sec.gov/Archives/edgar/data/1844419/000110465921042159/0001104659-21-042159-index.htm</filing-href>
+        <filing-type>S-1/A</filing-type>
+        <film-number>21775730</film-number>
+        <form-name>General form for registration of securities under the Securities Act of 1933</form-name>
+        <size>1 MB</size>
+      </content>
+      <id>urn:tag:sec.gov,2008:accession-number=0001104659-21-042159</id>
+      <link href="https://www.sec.gov/Archives/edgar/data/1844419/000110465921042159/0001104659-21-042159-index.htm" rel="alternate" type="text/html" />
+      <summary type="html"> &lt;b&gt;Filed:&lt;/b&gt; 2021-03-26 &lt;b&gt;AccNo:&lt;/b&gt; 0001104659-21-042159 &lt;b&gt;Size:&lt;/b&gt; 1 MB</summary>
+      <title>S-1/A [Amend]  - General form for registration of securities under the Securities Act of 1933</title>
+      <updated>2021-03-26T11:33:44-04:00</updated>
+    </entry>
+    <entry>
+      <category label="form type" scheme="https://www.sec.gov/" term="S-1/A" />
+      <content type="text/xml">
+        <accession-number>0001104659-21-039858</accession-number>
+        <act>33</act>
+        <amend>[Amend]</amend>
+        <file-number>333-253167</file-number>
+        <file-number-href>https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&amp;filenum=333-253167&amp;owner=exclude&amp;count=100</file-number-href>
+        <filing-date>2021-03-23</filing-date>
+        <filing-href>https://www.sec.gov/Archives/edgar/data/1844419/000110465921039858/0001104659-21-039858-index.htm</filing-href>
+        <filing-type>S-1/A</filing-type>
+        <film-number>21762649</film-number>
+        <form-name>General form for registration of securities under the Securities Act of 1933</form-name>
+        <size>2 MB</size>
+      </content>
+      <id>urn:tag:sec.gov,2008:accession-number=0001104659-21-039858</id>
+      <link href="https://www.sec.gov/Archives/edgar/data/1844419/000110465921039858/0001104659-21-039858-index.htm" rel="alternate" type="text/html" />
+      <summary type="html"> &lt;b&gt;Filed:&lt;/b&gt; 2021-03-23 &lt;b&gt;AccNo:&lt;/b&gt; 0001104659-21-039858 &lt;b&gt;Size:&lt;/b&gt; 2 MB</summary>
+      <title>S-1/A [Amend]  - General form for registration of securities under the Securities Act of 1933</title>
+      <updated>2021-03-22T19:39:21-04:00</updated>
+    </entry>
+    <entry>
+      <category label="form type" scheme="https://www.sec.gov/" term="S-1" />
+      <content type="text/xml">
+        <accession-number>0001104659-21-024398</accession-number>
+        <act>33</act>
+        <file-number>333-253167</file-number>
+        <file-number-href>https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&amp;filenum=333-253167&amp;owner=exclude&amp;count=100</file-number-href>
+        <filing-date>2021-02-16</filing-date>
+        <filing-href>https://www.sec.gov/Archives/edgar/data/1844419/000110465921024398/0001104659-21-024398-index.htm</filing-href>
+        <filing-type>S-1</filing-type>
+        <film-number>21641033</film-number>
+        <form-name>General form for registration of securities under the Securities Act of 1933</form-name>
+        <size>1 MB</size>
+      </content>
+      <id>urn:tag:sec.gov,2008:accession-number=0001104659-21-024398</id>
+      <link href="https://www.sec.gov/Archives/edgar/data/1844419/000110465921024398/0001104659-21-024398-index.htm" rel="alternate" type="text/html" />
+      <summary type="html"> &lt;b&gt;Filed:&lt;/b&gt; 2021-02-16 &lt;b&gt;AccNo:&lt;/b&gt; 0001104659-21-024398 &lt;b&gt;Size:&lt;/b&gt; 1 MB</summary>
+      <title>S-1  - General form for registration of securities under the Securities Act of 1933</title>
+      <updated>2021-02-16T17:25:34-05:00</updated>
+    </entry>
+    <id>https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&amp;CIK=0001844419</id>
+    <link href="https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&amp;CIK=0001844419&amp;type=S-1&amp;owner=exclude&amp;start=0&amp;count=100" rel="alternate" type="text/html" />
+    <link href="https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&amp;CIK=0001844419&amp;type=S-1&amp;owner=exclude&amp;start=0&amp;count=100&amp;output=atom" rel="self" type="application/atom+xml" />
+    <title>Maquia Capital Acquisition Corp  (0001844419)</title>
+    <updated>2025-01-25T18:06:55-05:00</updated>
+  </feed>

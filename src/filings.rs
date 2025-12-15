@@ -820,9 +820,6 @@ impl FilingOperations for Edgar {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::fs;
-
-    const SUBMISSION_FIXTURE: &str = "../fixtures/submissions/submission.json";
 
     #[test]
     fn test_datetime_parsing() {
@@ -839,177 +836,32 @@ mod tests {
     }
 
     #[test]
-    fn test_parse_submission() {
-        let content = fs::read_to_string(SUBMISSION_FIXTURE).unwrap();
-        let submission: Submission = serde_json::from_str(&content).unwrap();
-
-        assert_eq!(submission.name, "Apple Inc.");
-        assert_eq!(submission.cik, "0000320193");
-        assert_eq!(submission.tickers, vec!["AAPL"]);
-        assert!(!submission.filings.recent.accession_number.is_empty());
-    }
-
-    #[test]
-    fn test_detailed_filing_conversion() {
-        let content = fs::read_to_string(SUBMISSION_FIXTURE).unwrap();
-        let submission: Submission = serde_json::from_str(&content).unwrap();
-
-        let filing = DetailedFiling::try_from((&submission.filings.recent, 0)).unwrap();
-
-        assert!(filing.acceptance_date_time.timestamp() > 0);
-        assert!(!filing.accession_number.is_empty());
-        assert!(!filing.filing_date.is_empty());
-    }
-
-    #[test]
-    fn test_parse_directory() {
-        let content = fs::read_to_string("../fixtures/submissions/directory.json").unwrap();
-        let dir: DirectoryResponse = serde_json::from_str(&content).unwrap();
-
-        assert!(!dir.directory.item.is_empty());
-        let first_item = &dir.directory.item[0];
-        assert_eq!(first_item.name, "0001140361-25-000228-index-headers.html");
-        assert_eq!(first_item.type_, "text.gif");
-    }
-
-    #[tokio::test]
-    async fn test_latest_filing_content() {
-        // Create Edgar instance
+    fn test_text_filing_url_format() {
         let edgar = Edgar::new("test_agent example@example.com").unwrap();
 
-        // Test fetching 10-K filing
-        let filing_content = edgar
-            .get_latest_filing_content("320193", &["10-K"])
-            .await
-            .unwrap();
-
-        // Basic content validation
-        assert!(!filing_content.is_empty());
-        assert!(filing_content.len() > 1000); // Should have substantial content
-
-        // Test with invalid CIK
-        let invalid_result = edgar
-            .get_latest_filing_content("000000", &["10-K"])
-            .await;
-        assert!(matches!(invalid_result, Err(EdgarError::NotFound)));
-
-        // Test with invalid form type
-        let invalid_form = edgar
-            .get_latest_filing_content("320193", &["INVALID"])
-            .await;
-        assert!(matches!(invalid_form, Err(EdgarError::NotFound)));
-    }
-
-    #[tokio::test]
-    async fn test_get_text_filing_links() {
-        // Create Edgar instance
-        let edgar = Edgar::new("test_agent example@example.com").unwrap();
-
-        // Test with Apple Inc. CIK and limit to 3 filings
-        let opts = FilingOptions::new().with_limit(3);
-        let filing_links = edgar
-            .get_text_filing_links("320193", Some(opts))
-            .await
-            .unwrap();
-
-        // Verify we got the right number of links
-        assert_eq!(
-            filing_links.len(),
-            3,
-            "Should return exactly 3 filing links"
-        );
-
-        // Verify each link is properly formatted for text filings
-        for (filing, url, sec_url) in &filing_links {
-            // URLs should follow format: {base}/data/{cik}/{acc_no_without_dashes}/{acc_no_with_dashes}.txt
-            let expected_url_pattern = format!(
-                "{}/data/320193/{}/{}.txt",
-                edgar.edgar_archives_url,
-                filing.accession_number.replace("-", ""),
-                filing.accession_number
-            );
-
-            let expected_sec_url_pattern = format!(
-                "{}/data/320193/{}/{}-index.html",
-                edgar.edgar_archives_url,
-                filing.accession_number.replace("-", ""),
-                filing.accession_number
-            );
-
-            assert_eq!(
-                &expected_url_pattern, url,
-                "Text filing URL is incorrectly formatted"
-            );
-
-            assert_eq!(
-                &expected_sec_url_pattern, sec_url,
-                "Original SEC filing URL is incorrectly formatted"
-            )
-        }
-
-        // Test filtering by form type (10-K filings only)
-        let form_opts = FilingOptions::new().with_form_type("10-K").with_limit(2);
-        let form_filing_links = edgar
-            .get_text_filing_links("320193", Some(form_opts))
-            .await
-            .unwrap();
-
-        // Verify all returned filings are 10-K forms
-        for (filing, _, _) in &form_filing_links {
-            assert_eq!(
-                filing.form, "10-K",
-                "Filing form should be 10-K when filtered by form type"
-            );
-        }
-
-        // Test with empty results
-        let invalid_form_opts = FilingOptions::new().with_form_type("INVALID_FORM_TYPE");
-        let invalid_form_result = edgar
-            .get_text_filing_links("320193", Some(invalid_form_opts))
-            .await
-            .unwrap();
-        assert!(
-            invalid_form_result.is_empty(),
-            "Should return empty results for non-existent form type"
-        );
-    }
-
-    #[tokio::test]
-    async fn test_text_filing_url_format() {
-        // Create Edgar instance
-        let edgar = Edgar::new("test_agent example@example.com").unwrap();
-
-        // Test specific URL pattern with well-known CIK and accession number
-        let cik = "1889983"; // Example CIK
-        let accession_number = "0001213900-23-009668"; // Example accession number
+        let cik = "1889983";
+        let accession_number = "0001213900-23-009668";
 
         let url = edgar.get_text_filing_url(cik, accession_number).unwrap();
 
-        // Expected URL pattern
         let formatted_acc = accession_number.replace("-", "");
         let expected_url = format!(
             "{}/data/{}/{}/{}.txt",
             edgar.edgar_archives_url, cik, formatted_acc, accession_number
         );
 
-        assert_eq!(
-            url, expected_url,
-            "Text filing URL format doesn't match expected pattern"
-        );
+        assert_eq!(url, expected_url);
     }
 
-    #[tokio::test]
-    async fn test_sgml_header_url_format() {
-        // Create Edgar instance
+    #[test]
+    fn test_sgml_header_url_format() {
         let edgar = Edgar::new("test_agent example@example.com").unwrap();
 
-        // Test specific URL pattern with well-known CIK and accession number
-        let cik = "1889983"; // Example CIK
-        let accession_number = "0001213900-23-009668"; // Example accession number
+        let cik = "1889983";
+        let accession_number = "0001213900-23-009668";
 
         let url = edgar.get_sgml_header_url(cik, accession_number).unwrap();
 
-        // Expected URL pattern
         let formatted_acc = accession_number.replace("-", "");
         let expected_url = format!(
             "{}/data/{}/{}/{}.hdr.sgml",
@@ -1017,81 +869,5 @@ mod tests {
         );
 
         assert_eq!(url, expected_url);
-    }
-
-    #[tokio::test]
-    async fn test_get_sgml_header_links() {
-        // Create Edgar instance
-        let edgar = Edgar::new("test_agent example@example.com").unwrap();
-
-        // Test with Apple Inc. CIK and limit to 3 filings
-        let opts = FilingOptions::new().with_limit(3);
-        let filing_links = edgar
-            .get_sgml_header_links("320193", Some(opts))
-            .await
-            .unwrap();
-
-        // Verify we got the right number of links
-        assert_eq!(
-            filing_links.len(),
-            3,
-            "Should return exactly 3 filing links"
-        );
-
-        // Verify each link is properly formatted for SGML headers
-        for (filing, url, _) in &filing_links {
-            // URL should contain the .hdr.sgml extension
-            assert!(url.ends_with(".hdr.sgml"), "URL should end with .hdr.sgml");
-
-            // Verify format: {base}/data/{cik}/{acc_no_without_dashes}/{acc_no_with_dashes}.hdr.sgml
-            let formatted_acc = filing.accession_number.replace("-", "");
-            assert!(
-                url.contains(&formatted_acc),
-                "URL should contain the accession number without dashes"
-            );
-            assert!(
-                url.contains(&filing.accession_number),
-                "URL should contain the original accession number"
-            );
-        }
-    }
-
-    #[tokio::test]
-    async fn test_filings_with_form_type() {
-        let edgar = Edgar::new("test_agent example@example.com").unwrap();
-        let opts = FilingOptions::new().with_form_type("10-K");
-        let filings = edgar.filings("320193", Some(opts)).await.unwrap();
-        assert!(filings.iter().all(|f| f.form == "10-K"));
-    }
-
-    #[tokio::test]
-    async fn test_filings_with_limit() {
-        let edgar = Edgar::new("test_agent example@example.com").unwrap();
-        let opts = FilingOptions::new().with_limit(1);
-        let filings = edgar.filings("320193", Some(opts)).await.unwrap();
-        assert_eq!(filings.len(), 1);
-    }
-
-    #[tokio::test]
-    async fn test_filings_with_offset() {
-        let edgar = Edgar::new("test_agent example@example.com").unwrap();
-        let all_filings = edgar.filings("320193", None).await.unwrap();
-        let opts = FilingOptions::new().with_offset(1);
-        let offset_filings = edgar.filings("320193", Some(opts)).await.unwrap();
-        assert_eq!(offset_filings.len(), all_filings.len() - 1);
-    }
-
-    #[tokio::test]
-    async fn test_submissions() {
-        let edgar = Edgar::new("test_agent example@example.com").unwrap();
-        let submissions = edgar.submissions("320193").await.unwrap();
-        assert_eq!(submissions.name, "Apple Inc.");
-    }
-
-    #[tokio::test]
-    async fn test_submissions_not_found() {
-        let edgar = Edgar::new("test_agent example@example.com").unwrap();
-        let result = edgar.submissions("0").await;
-        assert!(matches!(result, Err(EdgarError::NotFound)));
     }
 }

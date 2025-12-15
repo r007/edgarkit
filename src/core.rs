@@ -504,25 +504,4 @@ mod tests {
         assert!(backoff1.as_millis() >= 1600 && backoff1.as_millis() <= 2400); // ±20% of 2000ms
         assert!(backoff2.as_millis() >= 3200 && backoff2.as_millis() <= 4800); // ±20% of 4000ms
     }
-
-    #[tokio::test]
-    async fn test_rate_limiting_and_backoff() {
-        let edgar = Edgar::new("test_agent example@example.com").unwrap();
-        let url = "https://www.sec.gov/files/company_tickers.json";
-
-        // Make multiple requests in quick succession
-        for i in 0..15 {
-            let result = edgar.get(url).await;
-            match result {
-                Ok(_) => println!("Request {} succeeded", i),
-                Err(EdgarError::RateLimitExceeded) => {
-                    println!("Rate limit exceeded on request {}", i);
-                    // Should only happen after MAX_RETRIES attempts
-                    assert!(i > 5);
-                    break;
-                }
-                Err(e) => panic!("Unexpected error: {}", e),
-            }
-        }
-    }
 }

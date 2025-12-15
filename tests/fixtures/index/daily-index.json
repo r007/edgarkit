@@ -1,0 +1,260 @@
+{
+  "directory": {
+    "name": "/usr/local/data/feedhold/tmp/daily-index/index.json",
+    "parent-dir": "../",
+    "item": [
+      {
+        "name": "1994",
+        "size": "19229 KB",
+        "last-modified": "11/24/2017 09:00:40 AM",
+        "type": "dir",
+        "href": "1994/"
+      },
+      {
+        "name": "1995",
+        "size": "48641 KB",
+        "last-modified": "11/24/2017 09:01:43 AM",
+        "type": "dir",
+        "href": "1995/"
+      },
+      {
+        "name": "1996",
+        "size": "89535 KB",
+        "last-modified": "11/24/2017 09:02:52 AM",
+        "type": "dir",
+        "href": "1996/"
+      },
+      {
+        "name": "1997",
+        "size": "116095 KB",
+        "last-modified": "11/24/2017 09:04:06 AM",
+        "type": "dir",
+        "href": "1997/"
+      },
+      {
+        "name": "1998",
+        "size": "188296 KB",
+        "last-modified": "11/24/2017 09:05:50 AM",
+        "type": "dir",
+        "href": "1998/"
+      },
+      {
+        "name": "1999",
+        "size": "122857 KB",
+        "last-modified": "11/24/2017 09:07:30 AM",
+        "type": "dir",
+        "href": "1999/"
+      },
+      {
+        "name": "2000",
+        "size": "132710 KB",
+        "last-modified": "11/24/2017 09:08:48 AM",
+        "type": "dir",
+        "href": "2000/"
+      },
+      {
+        "name": "2001",
+        "size": "137608 KB",
+        "last-modified": "11/24/2017 09:10:09 AM",
+        "type": "dir",
+        "href": "2001/"
+      },
+      {
+        "name": "2002",
+        "size": "176142 KB",
+        "last-modified": "11/24/2017 09:11:35 AM",
+        "type": "dir",
+        "href": "2002/"
+      },
+      {
+        "name": "2003",
+        "size": "304587 KB",
+        "last-modified": "11/24/2017 09:13:13 AM",
+        "type": "dir",
+        "href": "2003/"
+      },
+      {
+        "name": "2004",
+        "size": "393464 KB",
+        "last-modified": "11/24/2017 09:15:02 AM",
+        "type": "dir",
+        "href": "2004/"
+      },
+      {
+        "name": "2005",
+        "size": "402866 KB",
+        "last-modified": "11/24/2017 09:16:52 AM",
+        "type": "dir",
+        "href": "2005/"
+      },
+      {
+        "name": "2006",
+        "size": "427978 KB",
+        "last-modified": "11/24/2017 09:18:37 AM",
+        "type": "dir",
+        "href": "2006/"
+      },
+      {
+        "name": "2007",
+        "size": "438975 KB",
+        "last-modified": "11/24/2017 09:20:31 AM",
+        "type": "dir",
+        "href": "2007/"
+      },
+      {
+        "name": "2008",
+        "size": "399798 KB",
+        "last-modified": "11/24/2017 09:22:30 AM",
+        "type": "dir",
+        "href": "2008/"
+      },
+      {
+        "name": "2009",
+        "size": "361130 KB",
+        "last-modified": "11/24/2017 09:24:20 AM",
+        "type": "dir",
+        "href": "2009/"
+      },
+      {
+        "name": "2010",
+        "size": "376177 KB",
+        "last-modified": "11/24/2017 09:26:04 AM",
+        "type": "dir",
+        "href": "2010/"
+      },
+      {
+        "name": "2011",
+        "size": "285847 KB",
+        "last-modified": "12/07/2018 09:22:06 AM",
+        "type": "dir",
+        "href": "2011/"
+      },
+      {
+        "name": "2012",
+        "size": "391762 KB",
+        "last-modified": "11/24/2017 09:29:37 AM",
+        "type": "dir",
+        "href": "2012/"
+      },
+      {
+        "name": "2013",
+        "size": "422552 KB",
+        "last-modified": "11/24/2017 09:33:24 AM",
+        "type": "dir",
+        "href": "2013/"
+      },
+      {
+        "name": "2014",
+        "size": "513290 KB",
+        "last-modified": "11/24/2017 09:38:10 AM",
+        "type": "dir",
+        "href": "2014/"
+      },
+      {
+        "name": "2015",
+        "size": "646689 KB",
+        "last-modified": "11/24/2017 09:41:16 AM",
+        "type": "dir",
+        "href": "2015/"
+      },
+      {
+        "name": "2016",
+        "size": "617827 KB",
+        "last-modified": "11/24/2017 09:44:20 AM",
+        "type": "dir",
+        "href": "2016/"
+      },
+      {
+        "name": "2017",
+        "size": "630460 KB",
+        "last-modified": "12/07/2017 10:02:34 PM",
+        "type": "dir",
+        "href": "2017/"
+      },
+      {
+        "name": "2018",
+        "size": "615284 KB",
+        "last-modified": "12/07/2018 10:03:06 PM",
+        "type": "dir",
+        "href": "2018/"
+      },
+      {
+        "name": "2019",
+        "size": "610393 KB",
+        "last-modified": "12/06/2019 10:06:19 PM",
+        "type": "dir",
+        "href": "2019/"
+      },
+      {
+        "name": "2020",
+        "size": "664725 KB",
+        "last-modified": "12/06/2020 11:22:51 AM",
+        "type": "dir",
+        "href": "2020/"
+      },
+      {
+        "name": "2021",
+        "size": "745784 KB",
+        "last-modified": "12/08/2021 10:06:30 PM",
+        "type": "dir",
+        "href": "2021/"
+      },
+      {
+        "name": "2022",
+        "size": "721719 KB",
+        "last-modified": "12/07/2022 10:06:44 PM",
+        "type": "dir",
+        "href": "2022/"
+      },
+      {
+        "name": "2023",
+        "size": "743909 KB",
+        "last-modified": "12/14/2023 10:05:48 PM",
+        "type": "dir",
+        "href": "2023/"
+      },
+      {
+        "name": "2024",
+        "size": "783790 KB",
+        "last-modified": "12/06/2024 10:21:13 PM",
+        "type": "dir",
+        "href": "2024/"
+      },
+      {
+        "name": "2025",
+        "size": "18867 KB",
+        "last-modified": "01/08/2025 09:08:42 PM",
+        "type": "dir",
+        "href": "2025/"
+      },
+      {
+        "name": "bulkdata",
+        "size": "1356669 KB",
+        "last-modified": "01/08/2025 12:21:27 AM",
+        "type": "dir",
+        "href": "bulkdata/"
+      },
+      {
+        "name": "sitemap.dailyindexes.xml",
+        "size": "1 KB",
+        "last-modified": "11/24/2017 09:47:25 AM",
+        "type": "file",
+        "href": "sitemap.dailyindexes.xml"
+      },
+      {
+        "name": "sitemap.xml",
+        "size": "173 KB",
+        "last-modified": "11/24/2017 09:47:25 AM",
+        "type": "file",
+        "href": "sitemap.xml"
+      },
+      {
+        "name": "xbrl",
+        "size": "1235618 KB",
+        "last-modified": "01/08/2025 12:11:47 AM",
+        "type": "dir",
+        "href": "xbrl/"
+      }
+    ]
+  }
+}

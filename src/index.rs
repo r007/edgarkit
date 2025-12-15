@@ -633,99 +633,6 @@ impl IndexOperations for Edgar {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::fs;
-
-    const FULL_INDEX_FIXTURE: &str = "../fixtures/index/full-index.json";
-    const FULL_INDEX_QTR_FIXTURE: &str = "../fixtures/index/full-index-qtr.json";
-    const DAILY_INDEX_FIXTURE: &str = "../fixtures/index/daily-index.json";
-    const DAILY_INDEX_2023_FIXTURE: &str = "../fixtures/index/daily-index-2023.json";
-
-    #[test]
-    fn test_parse_full_index() {
-        let content = fs::read_to_string(FULL_INDEX_FIXTURE).unwrap();
-        let response: IndexResponse = serde_json::from_str(&content).unwrap();
-
-        assert_eq!(response.directory.name, "full-index/");
-        assert_eq!(response.directory.parent_dir, "../");
-
-        let first_item = &response.directory.item[0];
-        assert_eq!(first_item.name, "1993");
-        assert_eq!(first_item.type_, ItemType::Dir);
-
-        // Test date parsing
-        assert_eq!(
-            first_item
-                .last_modified
-                .format("%Y-%m-%d %H:%M:%S")
-                .to_string(),
-            "2025-01-25 01:00:21"
-        );
-    }
-
-    #[test]
-    fn test_parse_quarter_index() {
-        let content = fs::read_to_string(FULL_INDEX_QTR_FIXTURE).unwrap();
-        let response: IndexResponse = serde_json::from_str(&content).unwrap();
-
-        let item = response
-            .directory
-            .item
-            .iter()
-            .find(|i| i.name == "company.idx")
-            .unwrap();
-
-        assert_eq!(item.type_, ItemType::File);
-        assert_eq!(item.size, "52453 KB");
-    }
-
-    #[test]
-    fn test_parse_daily_index() {
-        let content = fs::read_to_string(DAILY_INDEX_FIXTURE).unwrap();
-        let response: IndexResponse = serde_json::from_str(&content).unwrap();
-
-        assert!(response.directory.item.len() > 0);
-
-        // Test year directory
-        let year_2023 = response
-            .directory
-            .item
-            .iter()
-            .find(|i| i.name == "2023")
-            .unwrap();
-
-        assert_eq!(year_2023.type_, ItemType::Dir);
-        assert_eq!(year_2023.href, "2023/");
-        assert_eq!(year_2023.size, "743909 KB");
-    }
-
-    #[test]
-    fn test_parse_daily_index_year() {
-        let content = fs::read_to_string(DAILY_INDEX_2023_FIXTURE).unwrap();
-        let response: IndexResponse = serde_json::from_str(&content).unwrap();
-
-        // Test quarters
-        let quarters: Vec<_> = response
-            .directory
-            .item
-            .iter()
-            .map(|i| i.name.as_str())
-            .collect();
-
-        assert_eq!(quarters, vec!["QTR1", "QTR2", "QTR3", "QTR4"]);
-
-        // Test specific quarter
-        let qtr1 = response
-            .directory
-            .item
-            .iter()
-            .find(|i| i.name == "QTR1")
-            .unwrap();
-
-        assert_eq!(qtr1.type_, ItemType::Dir);
-        assert_eq!(qtr1.href, "QTR1/");
-        assert_eq!(qtr1.size, "16 KB");
-    }
-
     #[test]
     fn test_find_index_file() {
         let items = vec![
@@ -768,82 +675,14 @@ mod tests {
         assert_eq!(file.type_, ItemType::File);
     }
 
-    #[tokio::test]
-    async fn test_get_daily_filings() {
-        let edgar = Edgar::new("test_agent example@example.com").unwrap();
-
-        let entries = edgar
-            .get_daily_filings(EdgarDay::new(2023, 8, 1).unwrap(), None)
-            .await
-            .unwrap();
-        assert!(!entries.is_empty());
-
-        // Test entry fields
-        let entry = &entries[0];
-        assert!(entry.cik > 0);
-        assert!(!entry.company_name.is_empty());
-        assert!(!entry.form_type.is_empty());
-        assert!(!entry.url.is_empty());
-    }
-
-    #[tokio::test]
-    async fn test_get_periodic_filings() {
-        let edgar = Edgar::new("test_agent example@example.com").unwrap();
-
-        let entries = edgar
-            .get_period_filings(EdgarPeriod::new(2023, Quarter::Q1).unwrap(), None)
-            .await
-            .unwrap();
-        assert!(!entries.is_empty());
-
-        // Test entry fields
-        let entry = &entries[0];
-        assert!(entry.cik > 0);
-        assert!(!entry.company_name.is_empty());
-        assert!(!entry.form_type.is_empty());
-        assert!(!entry.url.is_empty());
-    }
-
-    #[tokio::test]
-    async fn test_filing_options() {
-        let edgar = Edgar::new("test_agent example@example.com").unwrap();
-
-        let options = FilingOptions::new()
-            .with_form_types(vec!["10-K".to_string(), "10-Q".to_string()])
-            .with_ciks(vec![1234567])
-            .with_offset(5)
-            .with_limit(10);
-
-        let day = EdgarDay::new(2023, 8, 15).unwrap();
-        let entries = edgar
-            .get_daily_filings(day, Some(options.clone()))
-            .await
-            .unwrap();
-
-        assert!(entries.iter().all(|e| e.cik == 1234567));
-        assert!(
-            entries
-                .iter()
-                .all(|e| ["10-K", "10-Q"].contains(&e.form_type.trim()))
-        );
-        assert!(entries.len() <= 10);
-    }
-
-    #[tokio::test]
-    async fn test_daily_index_invalid_year() {
+    #[test]
+    fn test_daily_index_invalid_year() {
         let period = EdgarPeriod::new(1993, Quarter::Q1);
         assert!(matches!(period, Err(EdgarError::InvalidYear)));
     }
 
-    #[tokio::test]
-    async fn test_daily_index_current_year() {
-        let edgar = Edgar::new("test_agent example@example.com").unwrap();
-        let result = edgar.daily_index(None).await;
-        assert!(result.is_ok());
-    }
-
-    #[tokio::test]
-    async fn test_period_invalid_year() {
+    #[test]
+    fn test_period_invalid_year() {
         let period = EdgarPeriod::new(1993, Quarter::Q1);
         assert!(matches!(period, Err(EdgarError::InvalidYear)));
     }
