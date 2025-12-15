@@ -266,6 +266,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Acknowledgments
 
+- Inspired in part by Joey Chilson’s work-in-progress [`edgar_client`](https://github.com/joeychilson/edgar_client) (Elixir/Rust). Thanks to Joey for publishing the endpoint URLs and early implementation ideas that helped shape this client; EdgarKit rewrites and extends those concepts in a Rust-first, consistent API.
 - Built with [reqwest](https://github.com/seanmonstar/reqwest) for HTTP requests
 - Rate limiting via [governor](https://github.com/benwis/governor)
 - XML parsing with [quick-xml](https://github.com/tafia/quick-xml)
