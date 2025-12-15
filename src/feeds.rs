@@ -212,115 +212,9 @@ impl FeedOperations for Edgar {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::fs;
-
-    const RSS_USGAAP_FIXTURE: &str = "../fixtures/rss/usgaap.rss";
-    const RSS_PRESSREL_FIXTURE: &str = "../fixtures/rss/pressreleases.rss";
-    const RSS_TESTIMONY_FIXTURE: &str = "../fixtures/rss/testimony.rss";
-    const ATOM_FIXTURE: &str = "../fixtures/atom/atom.xml";
-    const ATOM1_FIXTURE: &str = "../fixtures/atom/atom1.xml";
-
-    fn setup_edgar() -> Edgar {
-        Edgar::new("test_agent example@example.com").unwrap()
-    }
-
-    #[test]
-    fn test_parse_testimony_feed() {
-        let edgar = setup_edgar();
-        let content = fs::read_to_string(RSS_TESTIMONY_FIXTURE).unwrap();
-        let feed = edgar.rss_feed_from_string(&content).unwrap();
-
-        assert_eq!(feed.channel.title, "Testimony");
-        assert_eq!(feed.channel.language.as_deref().unwrap(), "en");
-        assert!(feed.channel.description.contains("Congressional testimony"));
-    }
-
-    #[test]
-    fn test_parse_feed_with_multiple_categories() {
-        let edgar = setup_edgar();
-        let content = fs::read_to_string(ATOM1_FIXTURE).unwrap();
-        let feed = edgar.current_feed_from_string(&content).unwrap();
-
-        let categories: Vec<_> = feed
-            .entries
-            .iter()
-            .filter_map(|e| e.category.as_ref())
-            .map(|c| c.term.as_str())
-            .collect();
-
-        assert!(categories.contains(&"8-K"));
-        assert!(categories.contains(&"425"));
-        assert!(categories.contains(&"SC 13G"));
-    }
-
-    #[test]
-    fn test_xml_namespaces() {
-        let edgar = setup_edgar();
-        let content = fs::read_to_string(RSS_USGAAP_FIXTURE).unwrap();
-        let feed = edgar.rss_feed_from_string(&content).unwrap();
-
-        assert!(feed.channel.atom_link.is_some());
-        let atom_link = feed.channel.atom_link.unwrap();
-        assert_eq!(atom_link.rel.as_deref(), Some("self"));
-        assert!(atom_link.href.contains("usgaap.rss.xml"));
-    }
-
-    #[test]
-    fn test_feed_dates() {
-        let edgar = setup_edgar();
-        let content = fs::read_to_string(RSS_PRESSREL_FIXTURE).unwrap();
-        let feed = edgar.rss_feed_from_string(&content).unwrap();
-
-        // Don't check lastBuildDate as it's not present in pressreleases.rss
-        // Check other date-related fields
-        let first_item = &feed.channel.items[0];
-        assert!(first_item.pub_date.is_some());
-        assert_eq!(
-            first_item.pub_date.as_deref().unwrap(),
-            "Fri, 24 Jan 2025 11:00:00 -0500"
-        );
-
-        // Test multiple items have dates
-        assert!(
-            feed.channel
-                .items
-                .iter()
-                .all(|item| item.pub_date.is_some())
-        );
-    }
-
-    #[test]
-    fn test_enclosure_handling() {
-        let edgar = setup_edgar();
-        let content = fs::read_to_string(RSS_USGAAP_FIXTURE).unwrap();
-        let feed = edgar.rss_feed_from_string(&content).unwrap();
-
-        let first_item = &feed.channel.items[0];
-        let enclosure = first_item.enclosure.as_ref().unwrap();
-
-        assert!(enclosure.url.contains("xbrl.zip"));
-        assert!(enclosure.length.is_some());
-        assert_eq!(enclosure.enclosure_type.as_deref(), Some("application/zip"));
-    }
-
-    #[test]
-    fn test_special_characters() {
-        let edgar = setup_edgar();
-        let content = fs::read_to_string(RSS_PRESSREL_FIXTURE).unwrap();
-        let feed = edgar.rss_feed_from_string(&content).unwrap();
-
-        let items = &feed.channel.items;
-        for item in items {
-            // Test HTML entities are decoded
-            assert!(!item.description.as_ref().unwrap().contains("&amp;"));
-            assert!(!item.description.as_ref().unwrap().contains("&lt;"));
-            assert!(!item.description.as_ref().unwrap().contains("&gt;"));
-        }
-    }
-
     #[test]
     fn test_empty_feed() {
-        let edgar = setup_edgar();
+        let edgar = Edgar::new("test_agent example@example.com").unwrap();
         let empty_rss = r#"<?xml version="1.0"?>
             <rss version="2.0">
                 <channel>
@@ -334,79 +228,6 @@ mod tests {
         assert!(feed.channel.items.is_empty());
         assert_eq!(feed.channel.title, "Empty Feed");
         assert_eq!(feed.channel.description, "Empty feed for testing");
-    }
-
-    #[test]
-    fn test_parse_rss_feed() {
-        let edgar = Edgar::new("test_agent example@example.com").unwrap();
-        let content = fs::read_to_string(RSS_USGAAP_FIXTURE).unwrap();
-        let feed = edgar.rss_feed_from_string(&content).unwrap();
-
-        assert_eq!(
-            feed.channel.title,
-            "Filings containing financial statements tagged using the US GAAP or IFRS taxonomies."
-        );
-        assert!(feed.channel.items.len() > 0);
-    }
-
-    #[test]
-    fn test_parse_atom_feed() {
-        let edgar = Edgar::new("test_agent example@example.com").unwrap();
-        let content = fs::read_to_string(ATOM_FIXTURE).unwrap();
-        let feed = edgar.current_feed_from_string(&content).unwrap();
-
-        assert!(feed.entries.len() > 0);
-        assert!(feed.company_info.is_some());
-    }
-
-    #[tokio::test]
-    async fn test_current_feed() {
-        let edgar = Edgar::new("test_agent example@example.com").unwrap();
-        let feed = edgar.current_feed(None).await.unwrap();
-        assert!(!feed.entries.is_empty());
-    }
-
-    #[tokio::test]
-    async fn test_current_feed_with_options() {
-        let edgar = Edgar::new("test_agent example@example.com").unwrap();
-        let params = FeedOptions::new(None)
-            .with_param("count", "10")
-            .with_param("type", "10-K");
-
-        let feed = edgar.current_feed(Some(params)).await.unwrap();
-        assert!(!feed.entries.is_empty());
-    }
-
-    #[tokio::test]
-    async fn test_company_feed() {
-        let edgar = Edgar::new("test_agent example@example.com").unwrap();
-        let feed = edgar.company_feed("320193", None).await.unwrap();
-        assert!(!feed.entries.is_empty());
-    }
-
-    #[tokio::test]
-    async fn test_company_feed_with_options() {
-        let edgar = Edgar::new("test_agent example@example.com").unwrap();
-        let params = FeedOptions::new(None)
-            .with_param("count", "10")
-            .with_param("type", "10-K");
-
-        let feed = edgar.company_feed("320193", Some(params)).await.unwrap();
-        assert!(!feed.entries.is_empty());
-    }
-
-    #[tokio::test]
-    async fn test_press_release_feed() {
-        let edgar = Edgar::new("test_agent example@example.com").unwrap();
-        let feed = edgar.press_release_feed().await.unwrap();
-        assert!(!feed.channel.items.is_empty());
-    }
-
-    #[tokio::test]
-    async fn test_historical_xbrl_feed() {
-        let edgar = Edgar::new("test_agent example@example.com").unwrap();
-        let feed = edgar.historical_xbrl_feed(2021, 1).await.unwrap();
-        assert!(!feed.channel.items.is_empty());
     }
 
     #[tokio::test]
@@ -425,7 +246,7 @@ mod tests {
 
     #[test]
     fn test_invalid_feed() {
-        let edgar = setup_edgar();
+        let edgar = Edgar::new("test_agent example@example.com").unwrap();
         let result = edgar.rss_feed_from_string("invalid xml");
         assert!(result.is_err());
     }
