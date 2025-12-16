@@ -10,7 +10,11 @@ documentation = "https://docs.rs/edgarkit"
 keywords = ["sec", "edgar", "finance", "filings", "api"]
 categories = ["api-bindings", "web-programming::http-client"]
 readme = "README.md"
-exclude = ["tests/fixtures/indexes/*.idx", ".assets/*"]
+exclude = [
+    "tests/*",
+    ".assets/*",
+    ".gitignore",
+]
 
 [features]
 default = ["search", "filings", "company", "feeds", "index"]
