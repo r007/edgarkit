@@ -81,9 +81,11 @@ pub enum EdgarError {
     #[error("Configuration error: {0}")]
     ConfigError(String),
 
+    #[cfg(any(feature = "atom", feature = "rss"))]
     #[error("XML parsing error: {0}")]
     Xml(#[from] quick_xml::Error),
 
+    #[cfg(any(feature = "atom", feature = "rss"))]
     #[error("XML deserialization error: {0}")]
     XmlDe(#[from] quick_xml::DeError),
 

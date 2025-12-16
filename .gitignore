@@ -1,0 +1,5 @@
+# Rust target folder
+**/target
+
+# VS Code config file
+.vscode
