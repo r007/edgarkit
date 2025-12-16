@@ -52,10 +52,7 @@ pub struct IndexEntry {
 
 /// Types of EDGAR index files with different formats and use cases.
 ///
-/// Each index type uses a slightly different format and field ordering:
-/// - **Company**: Daily index organized by company name (fixed-width format)
-/// - **Crawler**: Daily index optimized for web crawlers (fixed-width format)  
-/// - **Master**: Quarterly/daily index with pipe-delimited fields (most stable)
+/// Each index type uses a slightly different format and field ordering.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum IndexType {
     /// Company index - organized by company name, fixed-width format.
