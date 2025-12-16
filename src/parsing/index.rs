@@ -4,11 +4,22 @@ use serde::{Deserialize, Serialize};
 use std::io::BufRead;
 use std::str::FromStr;
 
+/// Configuration options for parsing EDGAR index files.
+///
+/// Provides fine-grained control over parsing behavior including field width specifications,
+/// delimiter choices, entry limits, and explicit index type selection.
 #[derive(Default)]
 pub struct IndexConfig {
+    /// Optional field widths for fixed-width format parsing (in characters).
     pub field_widths: Option<Vec<usize>>,
+
+    /// Optional delimiter character for delimited format parsing (e.g., '|' for master index).
     pub delimiter: Option<char>,
+
+    /// Maximum number of entries to parse before stopping.
     pub max_entries: Option<usize>,
+
+    /// Explicit index type to use, bypassing auto-detection.
     pub index_type: Option<IndexType>,
 }
 
@@ -16,20 +27,44 @@ pub struct IndexParser {
     config: IndexConfig,
 }
 
+/// A single entry from an EDGAR index file representing a company filing.
+///
+/// Contains essential metadata about a filing including company identification,
+/// form type, filing date, and the URL to access the full filing document.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct IndexEntry {
+    /// Company name as it appears in EDGAR records.
     pub company_name: String,
+
+    /// SEC form type (e.g., "10-K", "8-K", "S-1").
     pub form_type: String,
+
+    /// Central Index Key - SEC's unique identifier for filers.
     #[serde(deserialize_with = "deserialize_str_to_u64")]
     pub cik: u64,
+
+    /// Date the filing was submitted (format varies by index type).
     pub date_filed: String,
+
+    /// Full URL to the filing document on SEC EDGAR.
     pub url: String,
 }
 
+/// Types of EDGAR index files with different formats and use cases.
+///
+/// Each index type uses a slightly different format and field ordering:
+/// - **Company**: Daily index organized by company name (fixed-width format)
+/// - **Crawler**: Daily index optimized for web crawlers (fixed-width format)  
+/// - **Master**: Quarterly/daily index with pipe-delimited fields (most stable)
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum IndexType {
+    /// Company index - organized by company name, fixed-width format.
     Company,
+
+    /// Crawler index - optimized for automated processing, fixed-width format.
     Crawler,
+
+    /// Master index - pipe-delimited format, most reliable for parsing.
     Master,
 }
 
