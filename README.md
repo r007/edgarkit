@@ -1,5 +1,9 @@
 # EdgarKit
 
+<div align="center">
+  <img src=".assets/mascot.png" alt="EdgarKit Mascot" width="200">
+</div>
+
 [![Crates.io](https://img.shields.io/crates/v/edgarkit.svg)](https://crates.io/crates/edgarkit)
 [![Documentation](https://docs.rs/edgarkit/badge.svg)](https://docs.rs/edgarkit)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
