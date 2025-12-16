@@ -184,6 +184,29 @@ Run any example with:
 cargo run --example basic_usage --all-features
 ```
 
+## Mini-Projects
+
+EdgarKit includes two standalone CLI tools in the `examples/` directory that demonstrate real-world usage:
+
+### IPO Scanner
+
+Scans recent EDGAR daily indices for S-1 filings (IPOs) and displays them in an interactive terminal UI (TUI).
+
+```bash
+# Run from examples/ipo-scanner
+cargo run --release -- --weekly
+```
+
+### Investment Adviser
+
+A CLI that fetches the latest 10-K/10-Q filings and uses an LLM (via OpenRouter) to generate investment recommendations.
+
+```bash
+# Run from examples/investment-adviser
+export OPENROUTER_API_KEY="..."
+cargo run --release -- --ticker AAPL --model deepseek/deepseek-v3.2
+```
+
 ## Rate Limiting
 
 EdgarKit automatically handles rate limiting to comply with SEC.gov's fair access policy:

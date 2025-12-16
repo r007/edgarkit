@@ -13,7 +13,7 @@ readme = "README.md"
 
 [features]
 default = ["search", "filings", "company", "feeds", "index"]
-search = ["dep:serde_urlencoded", "dep:futures"]
+search = ["dep:serde_urlencoded", "dep:futures-util"]
 filings = ["dep:flate2", "dep:chrono"]
 company = ["dep:chrono"]
 feeds = ["atom", "rss"]
@@ -29,10 +29,10 @@ serde_urlencoded = { version = "0.7.1", optional = true }
 quick-xml = { version = "0.37.5", features = ["serialize", "serde"], optional = true }
 
 # HTTP & Async
-reqwest = { version = "0.12.26", features = ["json"] }
+reqwest = { version = "0.12.26", default-features = false, features = ["json", "rustls-tls", "http2", "charset", "macos-system-configuration"] }
 tokio = { version = "1.48.0", features = ["macros", "rt-multi-thread"] }
 async-trait = "0.1.89"
-futures = { version = "0.3.31", optional = true }
+futures-util = { version = "0.3.31", optional = true }
 governor = "0.8.1"
 
 # Error handling

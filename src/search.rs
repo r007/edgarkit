@@ -719,7 +719,7 @@ impl SearchOperations for Edgar {
                 break;
             }
 
-            let results = futures::future::join_all(batch_futures).await;
+            let results = futures_util::future::join_all(batch_futures).await;
 
             for result in results {
                 match result {
