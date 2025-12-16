@@ -125,7 +125,7 @@ I originally built a filing pipeline in TypeScript. It worked—until it needed 
 
 ## Usage Examples
 
-// Examples are provided in the `examples/` directory to keep this README concise.
+Examples are provided in the `examples/` directory to keep this README concise.
 
 ### Download Filing Content
 
