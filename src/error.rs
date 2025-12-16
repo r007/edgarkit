@@ -8,8 +8,6 @@
 //! status codes to aid in debugging. The error types use `thiserror` for clean `Display`
 //! implementations and proper `Error` trait support.
 
-#[cfg(any(feature = "filings", feature = "index", feature = "feeds"))]
-use parsers::error::ParserError;
 use std::string::FromUtf8Error;
 use thiserror::Error;
 
@@ -83,9 +81,20 @@ pub enum EdgarError {
     #[error("Configuration error: {0}")]
     ConfigError(String),
 
-    #[cfg(any(feature = "filings", feature = "index", feature = "feeds"))]
-    #[error("Parser error: {0}")]
-    ParserError(#[from] ParserError),
+    #[error("XML parsing error: {0}")]
+    Xml(#[from] quick_xml::Error),
+
+    #[error("XML deserialization error: {0}")]
+    XmlDe(#[from] quick_xml::DeError),
+
+    #[error("Invalid format: {0}")]
+    InvalidFormat(String),
+
+    #[error("Value conversion error: {0}")]
+    ValueConversion(String),
+
+    #[error("String parsing error: {0}")]
+    ParseIntError(#[from] std::num::ParseIntError),
 
     #[error("UTF-8 conversion error: {0}")]
     Utf8Error(#[from] FromUtf8Error),
@@ -99,13 +108,6 @@ pub enum EdgarError {
         got_content_type: String,
         content_preview: String, // Add a preview of the content
     },
-}
-
-#[cfg(feature = "feeds")]
-impl From<quick_xml::DeError> for EdgarError {
-    fn from(error: quick_xml::DeError) -> Self {
-        EdgarError::XmlError(error.to_string())
-    }
 }
 
 pub type Result<T> = std::result::Result<T, EdgarError>;

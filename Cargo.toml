@@ -14,15 +14,14 @@ readme = "README.md"
 [features]
 default = ["search", "filings", "company", "feeds", "index"]
 search = ["dep:serde_urlencoded", "dep:futures"]
-filings = ["dep:flate2", "dep:chrono", "parsers/text"]
+filings = ["dep:flate2", "dep:chrono"]
 company = ["dep:chrono"]
-feeds = ["parsers/atom", "parsers/rss", "dep:quick-xml"]
-index = ["dep:flate2", "dep:chrono", "parsers/index", "dep:regex"]
+feeds = ["atom", "rss"]
+atom = ["dep:quick-xml"]
+rss = ["dep:quick-xml"]
+index = ["dep:flate2", "dep:chrono", "dep:regex"]
 
 [dependencies]
-# Internal dependencies
-parsers = { path = "../parsers", optional = true }
-
 # Serialization
 serde = { workspace = true }
 serde_json = { workspace = true }

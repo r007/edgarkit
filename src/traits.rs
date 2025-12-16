@@ -28,13 +28,13 @@ use super::index::{EdgarDay, EdgarPeriod, IndexResponse};
 use super::options::{FeedOptions, FilingOptions};
 #[cfg(feature = "search")]
 use super::search::{Hit, SearchOptions, SearchResponse};
-use async_trait::async_trait;
 #[cfg(feature = "feeds")]
-use parsers::atom::AtomDocument;
+use crate::parsing::atom::AtomDocument;
 #[cfg(feature = "index")]
-use parsers::index::IndexEntry;
+use crate::parsing::index::IndexEntry;
 #[cfg(feature = "feeds")]
-use parsers::rss::RssDocument;
+use crate::parsing::rss::RssDocument;
+use async_trait::async_trait;
 
 /// Operations for retrieving company information and financial data.
 ///

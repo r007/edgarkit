@@ -45,6 +45,7 @@
 mod config;
 mod core;
 mod error;
+pub mod parsing;
 
 // Conditionally include modules
 #[cfg(any(feature = "filings", feature = "index", feature = "feeds"))]

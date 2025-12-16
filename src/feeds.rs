@@ -14,11 +14,11 @@ use super::Edgar;
 use super::FeedOperations;
 use super::error::{EdgarError, Result};
 use super::options::FeedOptions;
-use async_trait::async_trait;
-use parsers::{
+use crate::parsing::{
     atom::{AtomConfig, AtomDocument, AtomParser},
     rss::{RssConfig, RssDocument, RssParser},
 };
+use async_trait::async_trait;
 
 /// Feed operations for SEC EDGAR.
 ///
@@ -72,9 +72,7 @@ impl FeedOperations for Edgar {
     /// Parses the current feed from a string
     fn current_feed_from_string(&self, content: &str) -> Result<AtomDocument> {
         let parser = AtomParser::new(AtomConfig::default());
-        parser
-            .parse(content)
-            .map_err(|e| EdgarError::ParserError(e))
+        parser.parse(content)
     }
 
     /// Fetches the company feed for a given CIK
@@ -95,9 +93,7 @@ impl FeedOperations for Edgar {
     /// Parses the company feed from a string
     fn company_feed_from_string(&self, content: &str) -> Result<AtomDocument> {
         let parser = AtomParser::new(AtomConfig::default());
-        parser
-            .parse(content)
-            .map_err(|e| EdgarError::ParserError(e))
+        parser.parse(content)
     }
 
     /// Fetches various RSS feeds
@@ -109,9 +105,7 @@ impl FeedOperations for Edgar {
     /// Parses an RSS feed from a string
     fn rss_feed_from_string(&self, content: &str) -> Result<RssDocument> {
         let parser = RssParser::new(RssConfig::default());
-        parser
-            .parse(content)
-            .map_err(|e| EdgarError::ParserError(e))
+        parser.parse(content)
     }
 
     /// Fetches the press release feed
