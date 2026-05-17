@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-05-06
+
+### Breaking Changes
+
+- Removed `Edgar::filings(cik, opts)` and `Edgar::get_recent_filings(cik)` — use `edgar.submissions(cik).await?` followed by `submission.filings(opts)` instead
+- `FilingOperations::text_filing_links` and `sgml_header_links` are now synchronous and take `&Submission` instead of a CIK string
+
+### Added
+
+- HTTP response cache via [`moka`](https://crates.io/crates/moka) 0.12 behind the `cache` feature flag
+- `EdgarConfig::cache_ttl` and `cache_capacity` fields to configure the in-memory cache
+- `Submission::filings(opts)` — synchronous iterator over submission filings with optional filtering
+- `Submission::into_detailed_filings(edgar, opts)` — async method that fetches full filing details
+
+### Changed
+
+- `quick-xml` upgraded from ~0.37 to 0.40.1; XML text/attribute extraction now uses `xml10_content()` and `normalized_value(XmlVersion::Implicit1_0)` per the updated API
+- `governor` upgraded from 0.8 to 0.10.4
+
 ## [0.1.1] - 2026-04-11
 
 ### Changed

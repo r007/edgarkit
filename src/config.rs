@@ -46,6 +46,12 @@ pub struct EdgarConfig {
 
     /// Base URLs for different EDGAR services
     pub base_urls: EdgarUrls,
+
+    /// Time-to-live for cached HTTP responses (only active with the `cache` feature, default: 60s)
+    pub cache_ttl: Duration,
+
+    /// Maximum number of entries in the HTTP response cache (only active with the `cache` feature, default: 256)
+    pub cache_capacity: u64,
 }
 
 /// Base URLs for the different SEC EDGAR service endpoints.
@@ -82,6 +88,8 @@ impl Default for EdgarConfig {
                 files: "https://www.sec.gov/files".to_string(),
                 search: "https://efts.sec.gov/LATEST/search-index/".to_string(),
             },
+            cache_ttl: Duration::from_secs(60),
+            cache_capacity: 256,
         }
     }
 }
@@ -113,6 +121,8 @@ impl EdgarConfig {
             rate_limit,
             timeout,
             base_urls: base_urls.unwrap_or_default(),
+            cache_ttl: Duration::from_secs(60),
+            cache_capacity: 256,
         }
     }
 }

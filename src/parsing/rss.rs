@@ -1,7 +1,7 @@
 #[cfg(feature = "rss")]
 use crate::Result;
 #[cfg(feature = "rss")]
-use quick_xml::{Reader, events::Event};
+use quick_xml::{Reader, XmlVersion, events::Event};
 #[cfg(feature = "rss")]
 use serde::Deserialize;
 
@@ -266,7 +266,10 @@ impl RssParser {
                             // Regular link - get text content
                             if !e.attributes().any(|a| a.unwrap().key.as_ref() == b"href") {
                                 if let Ok(Event::Text(text)) = reader.read_event_into(&mut buf) {
-                                    link = text.unescape()?.into_owned();
+                                    link = text
+                                        .xml10_content()
+                                        .map_err(quick_xml::Error::from)?
+                                        .into_owned();
                                 }
                             }
                         }
@@ -278,10 +281,22 @@ impl RssParser {
 
                             for attr in e.attributes().flatten() {
                                 match attr.key.as_ref() {
-                                    b"href" => href = attr.unescape_value()?.into_owned(),
-                                    b"rel" => rel = Some(attr.unescape_value()?.into_owned()),
+                                    b"href" => {
+                                        href = attr
+                                            .normalized_value(XmlVersion::Implicit1_0)?
+                                            .into_owned()
+                                    }
+                                    b"rel" => {
+                                        rel = Some(
+                                            attr.normalized_value(XmlVersion::Implicit1_0)?
+                                                .into_owned(),
+                                        )
+                                    }
                                     b"type" => {
-                                        link_type = Some(attr.unescape_value()?.into_owned())
+                                        link_type = Some(
+                                            attr.normalized_value(XmlVersion::Implicit1_0)?
+                                                .into_owned(),
+                                        )
                                     }
                                     _ => {}
                                 }

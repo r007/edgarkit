@@ -48,7 +48,7 @@ Add EdgarKit to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-edgarkit = "0.1.0"
+edgarkit = "0.2.0"
 tokio = { version = "1", features = ["full"] }
 ```
 
@@ -58,7 +58,7 @@ EdgarKit uses feature flags to allow you to compile only what you need:
 
 ```toml
 [dependencies]
-edgarkit = { version = "0.1.0", features = ["search", "filings", "company"] }
+edgarkit = { version = "0.2.0", features = ["search", "filings", "company"] }
 ```
 
 Available features:
@@ -67,6 +67,7 @@ Available features:
 - `company` - Company information APIs (requires `chrono`)
 - `feeds` - RSS/Atom feed support (requires `quick-xml`)
 - `index` - Index file operations (requires `flate2`, `chrono`, `regex`)
+- `cache` - In-memory HTTP response cache via `moka` (configure via `EdgarConfig::cache_ttl` and `cache_capacity`)
 
 Default features: `["search", "filings", "company", "feeds", "index"]` (all features enabled)
 
@@ -86,7 +87,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .with_form_type("10-K")
         .with_limit(5);
     
-    let filings = edgar.filings("320193", Some(options)).await?;
+    let submission = edgar.submissions("320193").await?;
+    let filings = submission.filings(Some(options));
     
     for filing in filings {
         println!("Filed: {} - {}", filing.filing_date, filing.form);

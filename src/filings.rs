@@ -196,7 +196,7 @@ pub struct FilingFile {
 /// “Recent filings” table from the submissions endpoint.
 ///
 /// The SEC represents this data as parallel arrays (e.g., `accessionNumber[i]`, `form[i]`,
-/// `filingDate[i]`) rather than a list of objects. Use `get_recent_filings` to convert this into
+/// `filingDate[i]`) rather than a list of objects. Use `Submission::filings()` to convert this into
 /// a list of [`DetailedFiling`] values.
 #[derive(Debug, Clone, Deserialize)]
 pub struct RecentFilings {
@@ -376,6 +376,55 @@ enum UrlType {
     SgmlHeader,
 }
 
+impl Submission {
+    /// Normalizes the SEC "recent filings" parallel arrays into row-oriented [`DetailedFiling`] records.
+    ///
+    /// Entries with an unparseable `acceptanceDateTime` are silently skipped rather than
+    /// failing the entire call.
+    pub fn into_detailed_filings(&self) -> Vec<DetailedFiling> {
+        (0..self.filings.recent.accession_number.len())
+            .filter_map(|idx| DetailedFiling::try_from((&self.filings.recent, idx)).ok())
+            .collect()
+    }
+
+    /// Returns filings with optional filtering by form type, offset, and limit.
+    ///
+    /// By default, when you request a specific form type like "S-1", amendments ("S-1/A") are
+    /// included automatically. Disable this with [`FilingOptions::with_include_amendments`].
+    ///
+    /// Results are in the same order as the SEC submissions payload (newest-first).
+    pub fn filings(&self, opts: Option<FilingOptions>) -> Vec<DetailedFiling> {
+        let mut all_filings = self.into_detailed_filings();
+
+        if let Some(opts) = opts {
+            if let Some(ref form_types) = opts.form_types {
+                let mut expanded_types = form_types.clone();
+
+                if opts.include_amendments {
+                    for form_type in form_types {
+                        if !form_type.ends_with("/A") {
+                            expanded_types.push(format!("{}/A", form_type));
+                        }
+                    }
+                }
+
+                all_filings
+                    .retain(|filing| expanded_types.iter().any(|ft| ft == &filing.form.trim()));
+            }
+
+            if let Some(offset) = opts.offset {
+                all_filings = all_filings.into_iter().skip(offset).collect();
+            }
+
+            if let Some(limit) = opts.limit {
+                all_filings.truncate(limit);
+            }
+        }
+
+        all_filings
+    }
+}
+
 impl Edgar {
     fn build_url(&self, url_type: UrlType, params: &[&str]) -> Result<String> {
         match url_type {
@@ -467,7 +516,7 @@ impl Edgar {
 /// paginate, and download documents.
 ///
 /// **What you typically do:**
-/// 1) Call `filings()` (or `get_recent_filings()`) to get metadata.
+/// 1) Call `submission.filings(opts)` to get metadata.
 /// 2) Use `filing_directory()` to discover the files for a specific accession.
 /// 3) Download the primary document with `get_latest_filing_content()` or `get_filing_content_by_id()`.
 ///
@@ -494,107 +543,6 @@ impl FilingOperations for Edgar {
         let url = self.build_url(UrlType::Submission, &[cik])?;
         let response = self.get(&url).await?;
         Ok(serde_json::from_str::<Submission>(&response)?)
-    }
-
-    /// Retrieves recent filings for a given CIK.
-    ///
-    /// This is a convenience wrapper around `submissions()` that normalizes the SEC “recent” table
-    /// into row-oriented [`DetailedFiling`] records.
-    ///
-    /// If a specific row has an invalid timestamp (e.g., malformed `acceptanceDateTime`), that row is
-    /// skipped; the rest of the results are returned.
-    async fn get_recent_filings(&self, cik: &str) -> Result<Vec<DetailedFiling>> {
-        let submission = self.submissions(cik).await?;
-        let mut detailed_filings = Vec::new();
-
-        // Process recent filings
-        for idx in 0..submission.filings.recent.accession_number.len() {
-            if let Ok(filing) = DetailedFiling::try_from((&submission.filings.recent, idx)) {
-                detailed_filings.push(filing);
-            }
-        }
-
-        Ok(detailed_filings)
-    }
-
-    /// Gets filings for a company, with optional filtering by form type, offset, and limit.
-    ///
-    /// By default, when you request a specific form type like "S-1", this automatically includes
-    /// amendments too ("S-1/A") so you get the complete picture. You can disable this with
-    /// `with_include_amendments(false)`.
-    ///
-    /// Results are returned in the same order as the SEC submissions payload (typically newest-first).
-    ///
-    /// # Parameters
-    ///
-    /// * `cik` - The company's Central Index Key
-    /// * `opts` - Optional filters:
-    ///   - `form_types`: Which form types to include
-    ///   - `include_amendments`: Whether to add amendment forms automatically (default: true)
-    ///   - `offset`: Skip this many filings from the start
-    ///   - `limit`: Return at most this many filings
-    ///
-    /// # Returns
-    ///
-    /// A list of filings matching your criteria, sorted with newest first.
-    ///
-    /// # Examples
-    ///
-    /// ```ignore
-    /// use edgarkit::{Edgar, FilingOperations, FilingOptions};
-    ///
-    /// #[tokio::main]
-    /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    ///     let edgar = Edgar::new("app contact@example.com")?;
-    ///
-    ///     // Returns both S-1 and S-1/A filings (default behavior).
-    ///     let opts = FilingOptions::new().with_form_type("S-1".to_string());
-    ///     let filings = edgar.filings("320193", Some(opts)).await?;
-    ///
-    ///     // Returns only S-1 filings, excluding amendments.
-    ///     let opts = FilingOptions::new()
-    ///         .with_form_type("S-1".to_string())
-    ///         .with_include_amendments(false);
-    ///     let filings_no_amends = edgar.filings("320193", Some(opts)).await?;
-    ///
-    ///     println!("with_amendments={}, without_amendments={}", filings.len(), filings_no_amends.len());
-    ///     Ok(())
-    /// }
-    /// ```
-    async fn filings(&self, cik: &str, opts: Option<FilingOptions>) -> Result<Vec<DetailedFiling>> {
-        let mut all_filings = self.get_recent_filings(cik).await?;
-
-        // Apply filters if provided
-        if let Some(opts) = opts {
-            // Filter by form types if specified
-            if let Some(ref form_types) = opts.form_types {
-                let mut expanded_types = form_types.clone();
-
-                // Add amendment forms if include_amendments is true (default)
-                if opts.include_amendments {
-                    for form_type in form_types {
-                        if !form_type.ends_with("/A") {
-                            expanded_types.push(format!("{}/A", form_type));
-                        }
-                    }
-                }
-
-                all_filings
-                    .retain(|filing| expanded_types.iter().any(|ft| ft == &filing.form.trim()));
-            }
-
-            // Apply offset
-            if let Some(offset) = opts.offset {
-                all_filings = all_filings.into_iter().skip(offset).collect();
-            }
-
-            // Apply limit
-            if let Some(limit) = opts.limit {
-                all_filings.truncate(limit);
-            }
-        }
-
-        Ok(all_filings)
     }
 
     /// Retrieves the filing directory for a specific filing.
@@ -744,7 +692,8 @@ impl FilingOperations for Edgar {
 
         let opts = FilingOptions::new()
             .with_form_types(form_types.iter().map(|s| (*s).to_string()).collect());
-        let filings = self.filings(cik, Some(opts)).await?;
+        let submission = self.submissions(cik).await?;
+        let filings = submission.filings(Some(opts));
 
         // filings() returns newest-first. Prefer the first filing with a primary document.
         let filing = filings
@@ -770,12 +719,13 @@ impl FilingOperations for Edgar {
     ///
     /// Use this when you want to hand off URLs to another system (queue, downloader, UI) without
     /// eagerly fetching the documents.
-    async fn get_text_filing_links(
+    fn text_filing_links(
         &self,
-        cik: &str,
+        submission: &Submission,
         opts: Option<FilingOptions>,
     ) -> Result<Vec<(DetailedFiling, String, String)>> {
-        let filings = self.filings(cik, opts).await?;
+        let cik = &submission.cik;
+        let filings = submission.filings(opts);
 
         let mut links = Vec::new();
         for filing in filings {
@@ -793,14 +743,15 @@ impl FilingOperations for Edgar {
 
     /// Generates download and browser links for SGML header (`.hdr.sgml`) files.
     ///
-    /// Like `get_text_filing_links()`, this is a link builder: it filters filings and returns
+    /// Like `text_filing_links()`, this is a link builder: it filters filings and returns
     /// URLs, but does not download anything.
-    async fn get_sgml_header_links(
+    fn sgml_header_links(
         &self,
-        cik: &str,
+        submission: &Submission,
         opts: Option<FilingOptions>,
     ) -> Result<Vec<(DetailedFiling, String, String)>> {
-        let filings = self.filings(cik, opts).await?;
+        let cik = &submission.cik;
+        let filings = submission.filings(opts);
 
         let mut links = Vec::new();
         for filing in filings {

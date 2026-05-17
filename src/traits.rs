@@ -80,10 +80,6 @@ pub trait CompanyOperations {
 pub trait FilingOperations {
     /// Retrieves all submissions for a specific company identified by CIK.
     async fn submissions(&self, cik: &str) -> Result<Submission>;
-    /// Helper function to get recent filings in a form of a Vec.
-    async fn get_recent_filings(&self, cik: &str) -> Result<Vec<DetailedFiling>>;
-    /// Retrieves a list of filings for a specific company identified by CIK.
-    async fn filings(&self, cik: &str, opts: Option<FilingOptions>) -> Result<Vec<DetailedFiling>>;
     /// Retrieves the directory structure for a specific filing.
     async fn filing_directory(
         &self,
@@ -101,16 +97,21 @@ pub trait FilingOperations {
     /// Use this when you want “latest 10-Q **or** 10-K”, etc. The forms are applied as a filter,
     /// and the newest matching filing (as returned by the SEC) is downloaded.
     async fn get_latest_filing_content(&self, cik: &str, form_types: &[&str]) -> Result<String>;
-    /// Generates URLs for text filings with original SEC.gov links based on specified options without downloading content
-    async fn get_text_filing_links(
+    /// Generates download and browser links for the text rendition of filings.
+    ///
+    /// Takes an already-fetched [`Submission`] so no additional network call is made.
+    /// Returns tuples of (`DetailedFiling`, text-archive URL, SEC index HTML URL).
+    fn text_filing_links(
         &self,
-        cik: &str,
+        submission: &Submission,
         opts: Option<FilingOptions>,
     ) -> Result<Vec<(DetailedFiling, String, String)>>;
-    /// Generates URLs for SGML header files with original SEC.gov links based on specified options without downloading content
-    async fn get_sgml_header_links(
+    /// Generates download and browser links for SGML header (`.hdr.sgml`) files.
+    ///
+    /// Takes an already-fetched [`Submission`] so no additional network call is made.
+    fn sgml_header_links(
         &self,
-        cik: &str,
+        submission: &Submission,
         opts: Option<FilingOptions>,
     ) -> Result<Vec<(DetailedFiling, String, String)>>;
 }

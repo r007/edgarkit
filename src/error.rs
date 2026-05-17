@@ -28,7 +28,7 @@ use thiserror::Error;
 /// # use edgarkit::{Edgar, EdgarError, FilingOperations};
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 /// # let edgar = Edgar::new("app contact@example.com")?;
-/// match edgar.get_recent_filings("0001234567").await {
+/// match edgar.submissions("0001234567").await.map(|s| s.filings(None)) {
 ///     Ok(filings) => println!("Found {} filings", filings.len()),
 ///     Err(EdgarError::NotFound) => println!("Company not found"),
 ///     Err(EdgarError::RateLimitExceeded) => println!("Rate limited, try again later"),

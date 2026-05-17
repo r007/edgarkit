@@ -26,12 +26,10 @@ async fn latest_filing_content() {
 #[ignore]
 async fn get_text_filing_links() {
     let edgar = Edgar::new("test_agent example@example.com").unwrap();
+    let submission = edgar.submissions("320193").await.unwrap();
 
     let opts = FilingOptions::new().with_limit(3);
-    let filing_links = edgar
-        .get_text_filing_links("320193", Some(opts))
-        .await
-        .unwrap();
+    let filing_links = edgar.text_filing_links(&submission, Some(opts)).unwrap();
 
     assert_eq!(filing_links.len(), 3);
 
@@ -56,8 +54,7 @@ async fn get_text_filing_links() {
 
     let form_opts = FilingOptions::new().with_form_type("10-K").with_limit(2);
     let form_filing_links = edgar
-        .get_text_filing_links("320193", Some(form_opts))
-        .await
+        .text_filing_links(&submission, Some(form_opts))
         .unwrap();
 
     for (filing, _, _) in &form_filing_links {
@@ -66,8 +63,7 @@ async fn get_text_filing_links() {
 
     let invalid_form_opts = FilingOptions::new().with_form_type("INVALID_FORM_TYPE");
     let invalid_form_result = edgar
-        .get_text_filing_links("320193", Some(invalid_form_opts))
-        .await
+        .text_filing_links(&submission, Some(invalid_form_opts))
         .unwrap();
     assert!(invalid_form_result.is_empty());
 }
@@ -76,12 +72,10 @@ async fn get_text_filing_links() {
 #[ignore]
 async fn get_sgml_header_links() {
     let edgar = Edgar::new("test_agent example@example.com").unwrap();
+    let submission = edgar.submissions("320193").await.unwrap();
 
     let opts = FilingOptions::new().with_limit(3);
-    let filing_links = edgar
-        .get_sgml_header_links("320193", Some(opts))
-        .await
-        .unwrap();
+    let filing_links = edgar.sgml_header_links(&submission, Some(opts)).unwrap();
 
     assert_eq!(filing_links.len(), 3);
 
@@ -99,7 +93,11 @@ async fn get_sgml_header_links() {
 async fn filings_with_form_type() {
     let edgar = Edgar::new("test_agent example@example.com").unwrap();
     let opts = FilingOptions::new().with_form_type("10-K");
-    let filings = edgar.filings("320193", Some(opts)).await.unwrap();
+    let filings = edgar
+        .submissions("320193")
+        .await
+        .unwrap()
+        .filings(Some(opts));
     assert!(filings.iter().all(|f| f.form == "10-K"));
 }
 
@@ -108,7 +106,11 @@ async fn filings_with_form_type() {
 async fn filings_with_limit() {
     let edgar = Edgar::new("test_agent example@example.com").unwrap();
     let opts = FilingOptions::new().with_limit(1);
-    let filings = edgar.filings("320193", Some(opts)).await.unwrap();
+    let filings = edgar
+        .submissions("320193")
+        .await
+        .unwrap()
+        .filings(Some(opts));
     assert_eq!(filings.len(), 1);
 }
 
@@ -116,9 +118,10 @@ async fn filings_with_limit() {
 #[ignore]
 async fn filings_with_offset() {
     let edgar = Edgar::new("test_agent example@example.com").unwrap();
-    let all_filings = edgar.filings("320193", None).await.unwrap();
+    let submission = edgar.submissions("320193").await.unwrap();
+    let all_filings = submission.filings(None);
     let opts = FilingOptions::new().with_offset(1);
-    let offset_filings = edgar.filings("320193", Some(opts)).await.unwrap();
+    let offset_filings = submission.filings(Some(opts));
     assert_eq!(offset_filings.len(), all_filings.len() - 1);
 }
 

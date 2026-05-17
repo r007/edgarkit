@@ -25,7 +25,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
     println!("1. Fetching recent 10-K filings for CIK {}...", cik);
     let options = FilingOptions::new().with_form_type("10-K").with_limit(3);
 
-    let filings = edgar.filings(cik, Some(options)).await?;
+    let submission = edgar.submissions(cik).await?;
+    let filings = submission.filings(Some(options));
     println!("✓ Found {} 10-K filings:\n", filings.len());
 
     for (i, filing) in filings.iter().enumerate() {
@@ -89,7 +90,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         ])
         .with_limit(10);
 
-    let multi_filings = edgar.filings(cik, Some(multi_options)).await?;
+    let multi_filings = submission.filings(Some(multi_options));
     println!("✓ Found {} filings of mixed types", multi_filings.len());
 
     // Count by form type

@@ -32,7 +32,8 @@
 //!         .with_form_type("10-K")
 //!         .with_limit(5);
 //!     
-//!     let filings = edgar.filings("320193", Some(options)).await?;
+//!     let submission = edgar.submissions("320193").await?;
+//!     let filings = submission.filings(Some(options));
 //!     
 //!     for filing in filings {
 //!         println!("Filing: {} on {}", filing.form, filing.filing_date);
