@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] - 2026-05-18
+
+### Fixed
+
+- `Edgar::get` was accidentally scoped `pub(crate)`, preventing external callers from using it; it is now `pub` again so `edgar.get(url).await` works as before
+
 ## [0.2.0] - 2026-05-06
 
 ### Breaking Changes
@@ -18,6 +24,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `EdgarConfig::cache_ttl` and `cache_capacity` fields to configure the in-memory cache
 - `Submission::filings(opts)` — synchronous iterator over submission filings with optional filtering
 - `Submission::into_detailed_filings(edgar, opts)` — async method that fetches full filing details
+
+### Docs
+
+- Added documentation for the private `Edgar::fetch` method describing its rate-limiting gate, JSON/HTML content-type guard, 429 retry loop, and error mappings
 
 ### Changed
 

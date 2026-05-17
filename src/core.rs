@@ -335,7 +335,7 @@ impl Edgar {
     /// * `EdgarError::RateLimitExceeded` - Max retries exhausted for rate limits
     /// * `EdgarError::RequestError` - Network or HTTP errors
     /// * `EdgarError::InvalidResponse` - Unexpected status codes with content preview
-    pub(crate) async fn get(&self, url: &str) -> Result<String> {
+    pub async fn get(&self, url: &str) -> Result<String> {
         #[cfg(feature = "cache")]
         if let Some(cached) = self.http_cache.get(url).await {
             return Ok(cached);
