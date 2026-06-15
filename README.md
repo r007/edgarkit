@@ -67,7 +67,6 @@ Available features:
 - `company` - Company information APIs (requires `chrono`)
 - `feeds` - RSS/Atom feed support (requires `quick-xml`)
 - `index` - Index file operations (requires `flate2`, `chrono`, `regex`)
-- `cache` - In-memory HTTP response cache via `moka` (configure via `EdgarConfig::cache_ttl` and `cache_capacity`)
 
 Default features: `["search", "filings", "company", "feeds", "index"]` (all features enabled)
 

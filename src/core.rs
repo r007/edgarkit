@@ -2,8 +2,6 @@ use governor::{
     Quota, RateLimiter, clock::DefaultClock, middleware::NoOpMiddleware, state::InMemoryState,
     state::NotKeyed,
 };
-#[cfg(feature = "cache")]
-use moka::future::Cache;
 use reqwest::header::{HeaderMap, HeaderValue, USER_AGENT};
 use std::num::NonZeroU32;
 use std::sync::Arc;
@@ -37,10 +35,6 @@ pub struct Edgar {
 
     /// Base URL for EDGAR search endpoint
     pub(crate) edgar_search_url: String,
-
-    /// In-memory HTTP response cache keyed by URL (only present with the `cache` feature)
-    #[cfg(feature = "cache")]
-    pub(crate) http_cache: Cache<String, String>,
 }
 
 /// HTTP client for accessing the SEC EDGAR API with built-in rate limiting and retry logic.
@@ -96,8 +90,6 @@ pub struct Edgar {
 ///     rate_limit: 5,
 ///     timeout: Duration::from_secs(60),
 ///     base_urls: EdgarUrls::default(),
-///     cache_ttl: Duration::from_secs(60),
-///     cache_capacity: 256,
 /// };
 /// let edgar = Edgar::with_config(config)?;
 /// # Ok::<(), edgarkit::EdgarError>(())
@@ -133,8 +125,6 @@ impl Edgar {
             rate_limit: 10,
             timeout: Duration::from_secs(30),
             base_urls: EdgarUrls::default(),
-            cache_ttl: Duration::from_secs(60),
-            cache_capacity: 256,
         };
         Self::with_config(config)
     }
@@ -197,11 +187,6 @@ impl Edgar {
             edgar_data_url: config.base_urls.data,
             edgar_files_url: config.base_urls.files,
             edgar_search_url: config.base_urls.search,
-            #[cfg(feature = "cache")]
-            http_cache: Cache::builder()
-                .time_to_live(config.cache_ttl)
-                .max_capacity(config.cache_capacity)
-                .build(),
         })
     }
 
@@ -336,19 +321,7 @@ impl Edgar {
     /// * `EdgarError::RequestError` - Network or HTTP errors
     /// * `EdgarError::InvalidResponse` - Unexpected status codes with content preview
     pub async fn get(&self, url: &str) -> Result<String> {
-        #[cfg(feature = "cache")]
-        if let Some(cached) = self.http_cache.get(url).await {
-            return Ok(cached);
-        }
-
-        let response = self.fetch(url).await?;
-
-        #[cfg(feature = "cache")]
-        self.http_cache
-            .insert(url.to_string(), response.clone())
-            .await;
-
-        Ok(response)
+        self.fetch(url).await
     }
 
     /// Executes an HTTP GET request against the SEC EDGAR API with rate limiting, retries,
