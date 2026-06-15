@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-06-16
+
 ### Breaking Changes
 
 - Removed the `cache` Cargo feature and the `moka` dependency it pulled in; `Edgar::get` no longer caches HTTP responses
@@ -72,5 +74,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Comprehensive examples: basic usage, filing downloads, index operations, RSS feeds, search
 - Optional mini-project examples: investment-adviser CLI and IPO scanner TUI (S-1 filings)
 
+[0.2.1]: https://github.com/r007/edgarkit/compare/v0.2.0...v0.2.1
+[0.2.0]: https://github.com/r007/edgarkit/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/r007/edgarkit/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/r007/edgarkit/releases/tag/v0.1.0
