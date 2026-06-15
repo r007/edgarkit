@@ -244,6 +244,10 @@ pub struct RecentFilings {
     #[serde(rename = "isInlineXBRL")]
     pub is_inline_xbrl: Option<Vec<i32>>,
 
+    /// XBRL numeric flags (1 = has XBRL numeric data, null = not applicable)
+    #[serde(rename = "isXBRLNumeric")]
+    pub is_xbrl_numeric: Option<Vec<Option<i32>>>,
+
     /// Primary document filenames
     #[serde(rename = "primaryDocument")]
     pub primary_document: Option<Vec<String>>,
@@ -295,6 +299,9 @@ pub struct DetailedFiling {
     /// Contains Inline XBRL
     pub is_inline_xbrl: bool,
 
+    /// Contains XBRL numeric data
+    pub is_xbrl_numeric: bool,
+
     /// Primary document filename
     pub primary_document: Option<String>,
 
@@ -336,6 +343,15 @@ impl RecentFilings {
     fn get_bool_at(&self, vec_opt: &Option<Vec<i32>>, idx: usize) -> bool {
         vec_opt.as_ref().map(|x| x[idx] == 1).unwrap_or(false)
     }
+
+    fn get_nullable_bool_at(&self, vec_opt: &Option<Vec<Option<i32>>>, idx: usize) -> bool {
+        vec_opt
+            .as_ref()
+            .and_then(|v| v.get(idx))
+            .and_then(|v| *v)
+            .map(|v| v == 1)
+            .unwrap_or(false)
+    }
 }
 
 impl TryFrom<(&RecentFilings, usize)> for DetailedFiling {
@@ -359,9 +375,17 @@ impl TryFrom<(&RecentFilings, usize)> for DetailedFiling {
             size: recent.size[idx],
             is_xbrl: recent.get_bool_at(&recent.is_xbrl, idx),
             is_inline_xbrl: recent.get_bool_at(&recent.is_inline_xbrl, idx),
+            is_xbrl_numeric: recent.get_nullable_bool_at(&recent.is_xbrl_numeric, idx),
             primary_document: recent.get_vec_item_at(&recent.primary_document, idx),
             primary_doc_description: recent.get_vec_item_at(&recent.primary_doc_description, idx),
         })
+    }
+}
+
+impl DetailedFiling {
+    /// Returns `true` if this filing contains any XBRL data (standard, inline, or numeric).
+    pub fn has_xbrl_data(&self) -> bool {
+        self.is_xbrl || self.is_inline_xbrl || self.is_xbrl_numeric
     }
 }
 

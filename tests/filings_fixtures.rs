@@ -36,3 +36,40 @@ fn parse_directory_response() {
     assert_eq!(first_item.name, "0001140361-25-000228-index-headers.html");
     assert_eq!(first_item.type_, "text.gif");
 }
+
+#[test]
+fn parse_submission2_with_xbrl_numeric_all_nulls() {
+    let content = read_fixture("submissions/submission2.json");
+    let submission: Submission = serde_json::from_str(&content).unwrap();
+
+    assert_eq!(submission.name, "EQV Ventures Acquisition Corp. II");
+    assert!(submission.filings.recent.is_xbrl_numeric.is_some());
+
+    let filings = submission.into_detailed_filings();
+    assert!(!filings.is_empty());
+    assert!(filings.iter().all(|f| !f.is_xbrl_numeric));
+}
+
+#[test]
+fn parse_submission3_with_xbrl_numeric_mixed() {
+    let content = read_fixture("submissions/submission3.json");
+    let submission: Submission = serde_json::from_str(&content).unwrap();
+
+    assert_eq!(submission.name, "Twelve Seas Investment Co III/Cayman");
+    assert!(submission.filings.recent.is_xbrl_numeric.is_some());
+
+    let filings = submission.into_detailed_filings();
+    assert!(!filings.is_empty());
+    assert!(filings[0].is_xbrl_numeric);
+    assert!(filings[1..].iter().all(|f| !f.is_xbrl_numeric));
+}
+
+#[test]
+fn detailed_filing_has_xbrl_data() {
+    let content = read_fixture("submissions/submission3.json");
+    let submission: Submission = serde_json::from_str(&content).unwrap();
+
+    let filings = submission.into_detailed_filings();
+    // First filing has isXBRL=1 and isXBRLNumeric=1
+    assert!(filings[0].has_xbrl_data());
+}

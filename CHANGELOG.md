@@ -12,6 +12,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Removed the `cache` Cargo feature and the `moka` dependency it pulled in; `Edgar::get` no longer caches HTTP responses
 - Removed `EdgarConfig::cache_ttl` and `EdgarConfig::cache_capacity` fields; construct `EdgarConfig` via `EdgarConfig::new(...)` or struct-update syntax to migrate
 
+### Added
+
+- `RecentFilings::is_xbrl_numeric` field (`isXBRLNumeric`) — nullable parallel array indicating XBRL numeric data presence
+- `DetailedFiling::is_xbrl_numeric` field derived from the above
+- `DetailedFiling::has_xbrl_data()` helper that returns `true` if the filing has any XBRL data (standard, inline, or numeric)
+
 ## [0.2.1] - 2026-05-18
 
 ### Fixed
