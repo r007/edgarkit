@@ -32,7 +32,7 @@ If you’ve hit bottlenecks with scripting solutions, EdgarKit lets you keep the
 
 ## Features
 
-- **🚦 Rate-Limited HTTP Client** - Automatic compliance with SEC.gov fair access rules
+- **🚦 Adaptive Rate-Limited HTTP Client** - Automatic compliance with SEC.gov fair access rules; the limiter halves its own rate when EDGAR pushes back and climbs back as requests succeed, so concurrent workers sharing the quota converge on what the server will actually accept instead of retrying into a wall
 - **📄 Filing Operations** - Access company filings, submissions, and documents
 - **🏢 Company Information** - Retrieve company facts, tickers, and metadata
 - **🔍 Search Capabilities** - Find filings with customizable search criteria
@@ -48,7 +48,7 @@ Add EdgarKit to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-edgarkit = "0.2.0"
+edgarkit = "0.4.0"
 tokio = { version = "1", features = ["full"] }
 ```
 
@@ -58,7 +58,7 @@ EdgarKit uses feature flags to allow you to compile only what you need:
 
 ```toml
 [dependencies]
-edgarkit = { version = "0.2.0", features = ["search", "filings", "company"] }
+edgarkit = { version = "0.4.0", features = ["search", "filings", "company"] }
 ```
 
 Available features:

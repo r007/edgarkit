@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-08-07
+
+### Changed
+
+- **Rate limiting is now adaptive.** The token bucket lowers its own rate when the server pushes back (AIMD): a 429 or a retryable 5xx halves the permitted rate, and sustained success adds it back one request per second at a time, up to the configured `rate_limit`. Previously the limiter held a fixed rate no matter how hard EDGAR was rejecting requests, so backoff rescheduled individual requests into congestion that never cleared — measured against production traffic, every throttled request burned all five retries and then failed, a 0 % recovery rate. Rate reductions are collapsed to one per 500 ms window so a burst of rejections from a single congestion event halves the rate once rather than once per rejected request
+- **Retry backoff now uses full jitter.** The wait is drawn uniformly from `[0, 2^attempt x 1000ms]` instead of a ±20 % band around the ceiling. A narrow band leaves clients that were rejected together retrying inside a window narrow enough to collide again; spreading over the whole interval is what breaks up the herd
+
+### Added
+
+- Retries for transient server errors (500, 502, 503, 504) in `Edgar::get_bytes` and `Edgar::get_text`, using the same backoff and adaptive rate reduction as 429. EDGAR sheds load with 503 far more often than with 429, and these were previously fatal on the first response — in one production run they accounted for nearly twice as many lost documents as exhausted rate limits. 403 and 404 remain non-retryable
+- `Edgar::current_rate_limit()` returning the rate currently being enforced, for observability during large ingestion runs
+
+### Fixed
+
+- `Edgar::with_config` no longer silently accepted a zero `rate_limit` through a path that could panic; it returns `EdgarError::ConfigError` up front
+
 ## [0.3.0] - 2026-06-16
 
 ### Breaking Changes

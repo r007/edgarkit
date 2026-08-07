@@ -1,6 +1,6 @@
 [package]
 name = "edgarkit"
-version = "0.3.0"
+version = "0.4.0"
 edition = "2024"
 authors = ["Sergey Monin <moninsergei@gmail.com>"]
 license = "MIT"
@@ -45,6 +45,11 @@ thiserror = "2.0.18"
 tracing = "0.1.44"
 
 # Utilities
-chrono = { version = "0.4.44", optional = true }
+chrono = { version = "0.4.45", optional = true }
 fastrand = "2.4.1"
 flate2 = { version = "1.1.9", optional = true }
+
+[dev-dependencies]
+# The adaptive rate-limit tests stand up a local HTTP server that enforces a
+# quota the way EDGAR does, so they need tokio's networking and timers.
+tokio = { version = "1.52.3", features = ["macros", "rt-multi-thread", "net", "io-util", "time"] }
