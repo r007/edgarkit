@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-10-01
+
 ### Fixed
 
 - The `filings`, `index` and `feeds` features now compile when enabled on their own. Each previously built only alongside another feature that happened to supply a missing import or dependency
@@ -109,7 +111,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Comprehensive examples: basic usage, filing downloads, index operations, RSS feeds, search
 - Optional mini-project examples: investment-adviser CLI and IPO scanner TUI (S-1 filings)
 
-[Unreleased]: https://github.com/r007/edgarkit/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/r007/edgarkit/compare/v0.5.1...HEAD
+[0.5.1]: https://github.com/r007/edgarkit/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/r007/edgarkit/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/r007/edgarkit/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/r007/edgarkit/compare/v0.2.1...v0.3.0
