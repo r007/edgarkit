@@ -244,10 +244,11 @@ impl IndexParser {
 
         for line in reader.lines() {
             let line = line?;
-            if !line.trim().is_empty() && !line.starts_with("---") {
-                if let Some(entry) = self.parse_line(&line, &index_type)? {
-                    entries.push(entry);
-                }
+            if !line.trim().is_empty()
+                && !line.starts_with("---")
+                && let Some(entry) = self.parse_line(&line, &index_type)?
+            {
+                entries.push(entry);
             }
         }
 

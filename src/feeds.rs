@@ -191,7 +191,7 @@ impl FeedOperations for Edgar {
         if year < 2005 {
             return Err(EdgarError::InvalidXBRLYear);
         }
-        if month < 1 || month > 12 {
+        if !(1..=12).contains(&month) {
             return Err(EdgarError::InvalidMonth);
         }
 

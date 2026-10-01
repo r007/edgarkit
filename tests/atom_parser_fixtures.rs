@@ -125,7 +125,7 @@ fn test_atom_feed_metadata() {
     let doc = parser.parse(&content).unwrap();
 
     assert!(doc.title.contains("Maquia Capital"));
-    assert!(doc.entries.len() > 0);
+    assert!(!doc.entries.is_empty());
 }
 
 #[test]
@@ -152,7 +152,7 @@ fn test_atom_company_info() {
     assert!(
         doc.entries
             .iter()
-            .any(|e| e.category.as_ref().map_or(false, |c| c.term == "S-1"))
+            .any(|e| e.category.as_ref().is_some_and(|c| c.term == "S-1"))
     );
 }
 
@@ -191,7 +191,7 @@ fn test_atom_with_category_filter() {
     assert!(
         doc.entries
             .iter()
-            .all(|e| e.category.as_ref().map_or(false, |c| c.term == "S-1"))
+            .all(|e| e.category.as_ref().is_some_and(|c| c.term == "S-1"))
     );
 }
 

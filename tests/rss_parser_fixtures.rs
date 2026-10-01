@@ -38,7 +38,7 @@ fn test_rss_usgaap_feed() {
     );
     assert!(doc.channel.link.contains("sec.gov"));
     assert_eq!(doc.channel.language.as_deref().unwrap(), "en-us");
-    assert!(doc.channel.items.len() > 0);
+    assert!(!doc.channel.items.is_empty());
 
     // Check first item
     let first_item = &doc.channel.items[0];
@@ -108,9 +108,9 @@ fn test_multiple_filings() {
         .items
         .iter()
         .filter(|item| {
-            item.xbrl_filing.as_ref().map_or(false, |filing| {
-                filing.xmlns.is_some() || filing.form_type.is_some()
-            })
+            item.xbrl_filing
+                .as_ref()
+                .is_some_and(|filing| filing.xmlns.is_some() || filing.form_type.is_some())
         })
         .count();
     assert!(items_with_xbrl > 0);

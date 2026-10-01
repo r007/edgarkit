@@ -691,7 +691,7 @@ impl SearchOperations for Edgar {
         let mut all_hits = Vec::with_capacity(total_hits as usize);
         all_hits.extend(initial_response.hits.hits);
 
-        let total_pages = (total_hits + PAGE_SIZE - 1) / PAGE_SIZE;
+        let total_pages = total_hits.div_ceil(PAGE_SIZE);
         let mut current_page = 1;
 
         while current_page < total_pages {

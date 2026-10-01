@@ -14,7 +14,6 @@ use super::Edgar;
 use super::error::{EdgarError, Result};
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
-use serde_json;
 use std::collections::HashMap;
 
 /// Mapping between stock ticker symbols and company CIKs.
@@ -487,7 +486,7 @@ impl CompanyOperations for Edgar {
             .find(|t| t.ticker == ticker.to_uppercase())
             .ok_or(EdgarError::TickerNotFound)?;
 
-        Ok(company.cik.clone())
+        Ok(company.cik)
     }
 
     /// Retrieves the Central Index Key (CIK) for a given mutual fund ticker symbol.
@@ -515,7 +514,7 @@ impl CompanyOperations for Edgar {
             .find(|t| t.symbol == ticker.to_uppercase())
             .ok_or(EdgarError::TickerNotFound)?;
 
-        Ok(fund.cik.clone())
+        Ok(fund.cik)
     }
 
     /// Retrieves a list of company tickers with their associated exchange information from the SEC EDGAR database.

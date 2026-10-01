@@ -53,7 +53,6 @@ use async_trait::async_trait;
 use chrono::{Datelike, NaiveDateTime};
 use flate2::read::GzDecoder;
 use serde::{Deserialize, Serialize};
-use serde_json;
 use std::io::Read;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -214,10 +213,10 @@ impl EdgarDay {
         if year < 1994 {
             return Err(EdgarError::InvalidYear);
         }
-        if month < 1 || month > 12 {
+        if !(1..=12).contains(&month) {
             return Err(EdgarError::InvalidMonth);
         }
-        if day < 1 || day > 31 {
+        if !(1..=31).contains(&day) {
             return Err(EdgarError::InvalidDay);
         }
         Ok(Self { year, month, day })
@@ -343,7 +342,7 @@ impl Edgar {
         };
 
         let parser = IndexParser::new(config);
-        Ok(parser.parse(content.as_bytes())?)
+        parser.parse(content.as_bytes())
     }
 
     /// Picks the most appropriate index file from a directory listing.
@@ -352,11 +351,11 @@ impl Edgar {
     /// For quarterly indices, the filename is stable within a quarter folder (e.g., `company.idx`).
     ///
     /// When both `.gz` and `.idx` are present, we prefer `.gz` first.
-    fn find_index_file<'a>(
-        items: &'a [DirectoryItem],
+    fn find_index_file(
+        items: &[DirectoryItem],
         date: impl Into<EdgarDate>,
         index_type: IndexType,
-    ) -> Option<&'a DirectoryItem> {
+    ) -> Option<&DirectoryItem> {
         let prefix = index_type.as_str();
         let extensions = ["gz", "idx"]; // Priority order
 
@@ -446,7 +445,7 @@ impl Edgar {
     ) -> Result<IndexResponse> {
         match (year, quarter) {
             (Some(y), _) if y < 1994 => Err(EdgarError::InvalidYear),
-            (_, Some(q)) if q < 1 || q > 4 => Err(EdgarError::InvalidQuarter),
+            (_, Some(q)) if !(1..=4).contains(&q) => Err(EdgarError::InvalidQuarter),
             _ => {
                 let url = self.build_index_url(index_type, year, quarter)?;
                 let response = self.get(&url).await?;
@@ -462,7 +461,7 @@ impl Edgar {
     fn apply_filters(&self, mut entries: Vec<IndexEntry>, opts: &FilingOptions) -> Vec<IndexEntry> {
         // Filter by form types if specified
         if let Some(ref form_types) = opts.form_types {
-            entries.retain(|entry| form_types.iter().any(|ft| ft == &entry.form_type.trim()));
+            entries.retain(|entry| form_types.iter().any(|ft| ft == entry.form_type.trim()));
         }
 
         // Filter by CIK if specified

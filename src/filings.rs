@@ -20,7 +20,6 @@ use super::traits::FilingOperations;
 use async_trait::async_trait;
 use chrono::{DateTime, FixedOffset};
 use serde::Deserialize;
-use serde_json;
 
 /// A company's submissions payload (`/submissions/CIK##########.json`).
 ///
@@ -433,7 +432,7 @@ impl Submission {
                 }
 
                 all_filings
-                    .retain(|filing| expanded_types.iter().any(|ft| ft == &filing.form.trim()));
+                    .retain(|filing| expanded_types.iter().any(|ft| ft == filing.form.trim()));
             }
 
             if let Some(offset) = opts.offset {
@@ -647,7 +646,7 @@ impl FilingOperations for Edgar {
                 "Invalid filing ID format. Expected 'accession_number:filename'".to_string(),
             ));
         }
-        Ok(self.get_filing_url(cik, parts[0], parts[1])?)
+        self.get_filing_url(cik, parts[0], parts[1])
     }
 
     /// Retrieves the content of a specific filing based on the combined filing ID.
@@ -805,7 +804,7 @@ mod tests {
         ];
 
         for date in sample_dates {
-            let parsed = DateTime::parse_from_rfc3339(&date);
+            let parsed = DateTime::parse_from_rfc3339(date);
             assert!(parsed.is_ok());
         }
     }

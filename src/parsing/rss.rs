@@ -264,10 +264,10 @@ impl RssParser {
                     match e.name().as_ref() {
                         "link" => {
                             // Regular link - get text content
-                            if !e.attributes().any(|a| a.unwrap().key.as_ref() == "href") {
-                                if let Ok(Event::Text(text)) = reader.read_event_into(&mut buf) {
-                                    link = text.xml10_content().into_owned();
-                                }
+                            if !e.attributes().any(|a| a.unwrap().key.as_ref() == "href")
+                                && let Ok(Event::Text(text)) = reader.read_event_into(&mut buf)
+                            {
+                                link = text.xml10_content().into_owned();
                             }
                         }
                         "atom:link" => {

@@ -350,9 +350,10 @@ impl AtomParser {
 
         if !self.config.filter_categories.is_empty() {
             doc.entries.retain(|entry| {
-                entry.category.as_ref().map_or(false, |cat| {
-                    self.config.filter_categories.contains(&cat.term)
-                })
+                entry
+                    .category
+                    .as_ref()
+                    .is_some_and(|cat| self.config.filter_categories.contains(&cat.term))
             });
         }
 

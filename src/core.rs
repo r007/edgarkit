@@ -580,44 +580,43 @@ impl Edgar {
                     let headers = response.headers().clone();
 
                     // **Primary Check: If JSON was expected but HTML is received (regardless of status for client/server errors)**
-                    if url.ends_with(".json") && status.is_success() {
-                        if let Some(ct) = headers
+                    if url.ends_with(".json")
+                        && status.is_success()
+                        && let Some(ct) = headers
                             .get(reqwest::header::CONTENT_TYPE)
                             .and_then(|val| val.to_str().ok())
+                        && ct.to_lowercase().contains("text/html")
+                    {
+                        // SEC sometimes returns JSON with text/html content-type
+                        // Try to get the body and check if it's actually JSON
+                        let body_text = response
+                            .text()
+                            .await
+                            .unwrap_or_else(|_| "Failed to read response body".to_string());
+
+                        // Try to parse as JSON - if successful, it's valid JSON despite wrong content-type
+                        if body_text.trim_start().starts_with('{')
+                            || body_text.trim_start().starts_with('[')
                         {
-                            if ct.to_lowercase().contains("text/html") {
-                                // SEC sometimes returns JSON with text/html content-type
-                                // Try to get the body and check if it's actually JSON
-                                let body_text = response
-                                    .text()
-                                    .await
-                                    .unwrap_or_else(|_| "Failed to read response body".to_string());
-
-                                // Try to parse as JSON - if successful, it's valid JSON despite wrong content-type
-                                if body_text.trim_start().starts_with('{')
-                                    || body_text.trim_start().starts_with('[')
-                                {
-                                    tracing::warn!(
-                                        "Received text/html content-type for .json URL, but content appears to be JSON: {}",
-                                        url
-                                    );
-                                    return Ok(body_text);
-                                }
-
-                                // If it's actually HTML, return error
-                                let body_preview = body_text.chars().take(200).collect::<String>();
-                                return Err(EdgarError::UnexpectedContentType {
-                                    url: url.to_string(),
-                                    expected_pattern: "application/json".to_string(),
-                                    got_content_type: ct.to_string(),
-                                    content_preview: body_preview,
-                                });
-                            }
+                            tracing::warn!(
+                                "Received text/html content-type for .json URL, but content appears to be JSON: {}",
+                                url
+                            );
+                            return Ok(body_text);
                         }
-                        // If content-type wasn't text/html, or header was missing, proceed to normal status handling.
-                        // This means if it's a non-200 status but the content might be a valid JSON error (e.g., from SEC API),
-                        // it will be handled by the match status block below.
+
+                        // If it's actually HTML, return error
+                        let body_preview = body_text.chars().take(200).collect::<String>();
+                        return Err(EdgarError::UnexpectedContentType {
+                            url: url.to_string(),
+                            expected_pattern: "application/json".to_string(),
+                            got_content_type: ct.to_string(),
+                            content_preview: body_preview,
+                        });
                     }
+                    // If content-type wasn't text/html, or header was missing, proceed to normal status handling.
+                    // This means if it's a non-200 status but the content might be a valid JSON error (e.g., from SEC API),
+                    // it will be handled by the match status block below.
 
                     // **Standard Status Handling**
                     match status {
