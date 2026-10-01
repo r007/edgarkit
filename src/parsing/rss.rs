@@ -262,18 +262,15 @@ impl RssParser {
             match reader.read_event_into(&mut buf) {
                 Ok(Event::Start(ref e)) | Ok(Event::Empty(ref e)) => {
                     match e.name().as_ref() {
-                        b"link" => {
+                        "link" => {
                             // Regular link - get text content
-                            if !e.attributes().any(|a| a.unwrap().key.as_ref() == b"href") {
+                            if !e.attributes().any(|a| a.unwrap().key.as_ref() == "href") {
                                 if let Ok(Event::Text(text)) = reader.read_event_into(&mut buf) {
-                                    link = text
-                                        .xml10_content()
-                                        .map_err(quick_xml::Error::from)?
-                                        .into_owned();
+                                    link = text.xml10_content().into_owned();
                                 }
                             }
                         }
-                        b"atom:link" => {
+                        "atom:link" => {
                             // Atom link - get attributes
                             let mut href = String::new();
                             let mut rel = None;
@@ -281,18 +278,18 @@ impl RssParser {
 
                             for attr in e.attributes().flatten() {
                                 match attr.key.as_ref() {
-                                    b"href" => {
+                                    "href" => {
                                         href = attr
                                             .normalized_value(XmlVersion::Implicit1_0)?
                                             .into_owned()
                                     }
-                                    b"rel" => {
+                                    "rel" => {
                                         rel = Some(
                                             attr.normalized_value(XmlVersion::Implicit1_0)?
                                                 .into_owned(),
                                         )
                                     }
-                                    b"type" => {
+                                    "type" => {
                                         link_type = Some(
                                             attr.normalized_value(XmlVersion::Implicit1_0)?
                                                 .into_owned(),

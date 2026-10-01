@@ -1,6 +1,6 @@
 [package]
 name = "edgarkit"
-version = "0.4.0"
+version = "0.5.0"
 edition = "2024"
 authors = ["Sergey Monin <moninsergei@gmail.com>"]
 license = "MIT"
@@ -31,25 +31,25 @@ index = ["dep:flate2", "dep:chrono"]
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 serde_urlencoded = { version = "0.7.1", optional = true }
-quick-xml = { version = "0.40.1", features = ["serialize", "serde"], optional = true }
+quick-xml = { version = "0.42.0", features = ["serialize", "serde"], optional = true }
 
 # HTTP & Async
-reqwest = { version = "0.12.28", default-features = false, features = ["json", "rustls-tls", "http2", "charset", "macos-system-configuration"] }
-tokio = { version = "1.52.3", features = ["macros", "rt-multi-thread"] }
-async-trait = "0.1.89"
-futures-util = { version = "0.3.32", optional = true }
+reqwest = { version = "0.13.5", default-features = false, features = ["json", "rustls", "http2", "charset", "system-proxy"] }
+tokio = { version = "1.53.1", features = ["macros", "rt-multi-thread"] }
+async-trait = "0.1.92"
+futures-util = { version = "0.3.34", optional = true }
 governor = { version = "0.10.4", default-features = false, features = ["std"] }
 
 # Error handling
-thiserror = "2.0.18"
+thiserror = "2.0.21"
 tracing = "0.1.44"
 
 # Utilities
 chrono = { version = "0.4.45", optional = true }
-fastrand = "2.4.1"
-flate2 = { version = "1.1.9", optional = true }
+fastrand = "2.5.0"
+flate2 = { version = "1.1.10", optional = true }
 
 [dev-dependencies]
 # The adaptive rate-limit tests stand up a local HTTP server that enforces a
 # quota the way EDGAR does, so they need tokio's networking and timers.
-tokio = { version = "1.52.3", features = ["macros", "rt-multi-thread", "net", "io-util", "time"] }
+tokio = { version = "1.53.1", features = ["macros", "rt-multi-thread", "net", "io-util", "time"] }

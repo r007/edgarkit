@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-01
+
+### Breaking Changes
+
+- Atom `CompanyInfo` and `Address` fields that EDGAR does not always send are now `Option<String>`: `CompanyInfo::assigned_sic`, `assigned_sic_desc`, `fiscal_year_end` and `state_location`, and `Address::city`, `state` and `zip`. Read them with `.as_deref()` or handle the `None` case
+- Updated `reqwest` to 0.13. `EdgarError::RequestError` wraps `reqwest::Error`, so callers that match on it need the same major version. TLS still uses rustls, now with reqwest 0.13's defaults (the `aws-lc-rs` crypto provider and the platform certificate verifier)
+
+### Fixed
+
+- Company Atom feeds with an incomplete company record no longer fail to parse. A filer located outside the US (no state, ZIP or state location), a newly registered filer with no SIC code assigned yet, or one with no fiscal year end on record used to fail the whole document over the one missing field, taking the filing entries down with it. A missing `<addresses>` block is tolerated as well
+
+### Changed
+
+- Updated `quick-xml` to 0.42, `tokio` to 1.53, and the remaining dependencies to their latest compatible releases
+
 ## [0.4.0] - 2026-08-07
 
 ### Changed
