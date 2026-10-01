@@ -21,7 +21,10 @@ fn test_parse_spac_feed() {
         "Maquia Capital Acquisition Corp"
     );
     assert_eq!(doc.company_info.as_ref().unwrap().cik, "0001844419");
-    assert_eq!(doc.company_info.as_ref().unwrap().assigned_sic, "7372");
+    assert_eq!(
+        doc.company_info.as_ref().unwrap().assigned_sic.as_deref(),
+        Some("7372")
+    );
 
     let entries = &doc.entries;
     assert!(
@@ -43,12 +46,15 @@ fn test_parse_keen_vision_feed() {
         "Keen Vision Acquisition Corp."
     );
     assert_eq!(doc.company_info.as_ref().unwrap().cik, "0001889983");
-    assert_eq!(doc.company_info.as_ref().unwrap().assigned_sic, "6770");
+    assert_eq!(
+        doc.company_info.as_ref().unwrap().assigned_sic.as_deref(),
+        Some("6770")
+    );
 
     // Test address
     let address = &doc.company_info.as_ref().unwrap().addresses.address[0];
-    assert_eq!(address.city, "SUMMIT");
-    assert_eq!(address.state, "NJ");
+    assert_eq!(address.city.as_deref(), Some("SUMMIT"));
+    assert_eq!(address.state.as_deref(), Some("NJ"));
 }
 
 #[test]
@@ -200,4 +206,34 @@ fn test_atom_with_max_entries() {
     let doc = parser.parse(&content).unwrap();
 
     assert_eq!(doc.entries.len(), 3);
+}
+
+/// Real feeds EDGAR served for SPACs whose company record is incomplete. Each
+/// used to fail the whole parse — and with it the filing entries, which are
+/// what a caller wants — over one missing company field.
+#[test]
+fn test_parse_feeds_with_incomplete_company_records() {
+    let parser = setup_atom_parser();
+
+    // Singapore: no state, zip or state-location anywhere.
+    let doc = parser
+        .parse(&read_fixture("atom/offshore_address.xml"))
+        .unwrap();
+    let info = doc.company_info.as_ref().unwrap();
+    assert_eq!(info.conformed_name, "RF Acquisition Corp II");
+    assert_eq!(info.state_location, None);
+    assert_eq!(info.addresses.address[0].state, None);
+    assert_eq!(info.addresses.address[0].zip, None);
+    assert!(!doc.entries.is_empty());
+
+    // Newly registered: no SIC assigned yet.
+    let doc = parser.parse(&read_fixture("atom/no_sic.xml")).unwrap();
+    assert_eq!(doc.company_info.as_ref().unwrap().assigned_sic, None);
+
+    // No fiscal year end on record.
+    let doc = parser
+        .parse(&read_fixture("atom/no_fiscal_year_end.xml"))
+        .unwrap();
+    assert_eq!(doc.company_info.as_ref().unwrap().fiscal_year_end, None);
+    assert!(!doc.entries.is_empty());
 }

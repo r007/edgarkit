@@ -73,13 +73,15 @@ pub struct AtomDocument {
 #[cfg(feature = "atom")]
 pub struct CompanyInfo {
     /// Business and mailing addresses for the company.
+    #[serde(default)]
     pub addresses: Addresses,
 
-    /// Standard Industrial Classification (SIC) code.
-    pub assigned_sic: String,
+    /// Standard Industrial Classification (SIC) code. Absent until EDGAR
+    /// assigns one, which a newly registered filer can go weeks without.
+    pub assigned_sic: Option<String>,
 
     /// Human-readable description of the SIC category.
-    pub assigned_sic_desc: String,
+    pub assigned_sic_desc: Option<String>,
 
     /// Central Index Key - SEC's unique identifier for this filer.
     pub cik: String,
@@ -87,18 +89,21 @@ pub struct CompanyInfo {
     /// Official company name as registered with the SEC.
     pub conformed_name: String,
 
-    /// Company's fiscal year end date (MMDD format).
-    pub fiscal_year_end: String,
+    /// Company's fiscal year end date (MMDD format). Not every filer has one
+    /// on record.
+    pub fiscal_year_end: Option<String>,
 
-    /// Two-letter state code where the company is located.
-    pub state_location: String,
+    /// Two-letter state code where the company is located. Absent for a
+    /// company located outside the US.
+    pub state_location: Option<String>,
 }
 
 /// Container for one or more company addresses.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[cfg(feature = "atom")]
 pub struct Addresses {
     /// List of addresses (business, mailing, etc.).
+    #[serde(default)]
     pub address: Vec<Address>,
 }
 
@@ -111,10 +116,10 @@ pub struct Address {
     pub address_type: String,
 
     /// City name.
-    pub city: String,
+    pub city: Option<String>,
 
-    /// Two-letter state code.
-    pub state: String,
+    /// Two-letter state code. Absent for an address outside the US.
+    pub state: Option<String>,
 
     /// Primary street address line.
     pub street1: String,
@@ -122,8 +127,8 @@ pub struct Address {
     /// Secondary street address line (suite, floor, etc.).
     pub street2: Option<String>,
 
-    /// ZIP or postal code.
-    pub zip: String,
+    /// ZIP or postal code. Absent for many addresses outside the US.
+    pub zip: Option<String>,
 }
 
 /// A single entry in an Atom feed representing a filing or update.

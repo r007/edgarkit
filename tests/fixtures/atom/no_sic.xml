@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+  <feed xmlns="http://www.w3.org/2005/Atom">
+    <author>
+      <email>webmaster@sec.gov</email>
+      <name>Webmaster</name>
+    </author>
+    <company-info>
+      <addresses>
+        <address type="mailing">
+          <city>TEMPE</city>
+          <state>AZ</state>
+          <street1>ARC GROUP SECURITIES LLC</street1>
+          <street2>398 MILL AVE, SUITE 201B</street2>
+          <zip>85281</zip>
+        </address>
+        <address type="business">
+          <city>TEMPE</city>
+          <phone>1 928 625 0928</phone>
+          <state>AZ</state>
+          <street1>ARC GROUP SECURITIES LLC</street1>
+          <street2>398 MILL AVE, SUITE 201B</street2>
+          <zip>85281</zip>
+        </address>
+      </addresses>
+      <cik>0002135939</cik>
+      <cik-href>https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&amp;CIK=0002135939&amp;owner=include&amp;count=10</cik-href>
+      <conformed-name>Norient Acquisition</conformed-name>
+      <fiscal-year-end>1231</fiscal-year-end>
+      <state-location>AZ</state-location>
+      <state-location-href>https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&amp;State=AZ&amp;owner=include&amp;count=10</state-location-href>
+      <state-of-incorporation>AZ</state-of-incorporation>
+    </company-info>
+    <entry>
+      <category label="form type" scheme="https://www.sec.gov/" term="S-1" />
+      <content type="text/xml">
+        <accession-number>0001213900-26-064339</accession-number>
+        <act>33</act>
+        <file-number>333-296443</file-number>
+        <file-number-href>https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&amp;filenum=333-296443&amp;owner=include&amp;count=10</file-number-href>
+        <filing-date>2026-06-03</filing-date>
+        <filing-href>https://www.sec.gov/Archives/edgar/data/2135939/000121390026064339/0001213900-26-064339-index.htm</filing-href>
+        <filing-type>S-1</filing-type>
+        <film-number>261058424</film-number>
+        <form-name>General form for registration of securities under the Securities Act of 1933</form-name>
+        <size>9 MB</size>
+        <xbrl_href>https://www.sec.gov/cgi-bin/viewer?action=view&amp;cik=2135939&amp;accession_number=0001213900-26-064339&amp;xbrl_type=f</xbrl_href>
+      </content>
+      <id>urn:tag:sec.gov,2008:accession-number=0001213900-26-064339</id>
+      <link href="https://www.sec.gov/Archives/edgar/data/2135939/000121390026064339/0001213900-26-064339-index.htm" rel="alternate" type="text/html" />
+      <summary type="html"> &lt;b&gt;Filed:&lt;/b&gt; 2026-06-03 &lt;b&gt;AccNo:&lt;/b&gt; 0001213900-26-064339 &lt;b&gt;Size:&lt;/b&gt; 9 MB</summary>
+      <title>S-1  - General form for registration of securities under the Securities Act of 1933</title>
+      <updated>2026-06-02T19:28:57-04:00</updated>
+    </entry>
+    <id>https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&amp;CIK=0002135939</id>
+    <link href="https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&amp;CIK=2135939&amp;owner=include&amp;start=0&amp;count=10" rel="alternate" type="text/html" />
+    <link href="https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&amp;CIK=2135939&amp;owner=include&amp;start=0&amp;count=10&amp;output=atom" rel="self" type="application/atom+xml" />
+    <title>Norient Acquisition  (0002135939)</title>
+    <updated>2026-09-30T18:31:04-04:00</updated>
+  </feed>

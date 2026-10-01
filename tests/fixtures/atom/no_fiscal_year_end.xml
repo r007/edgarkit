@@ -1,0 +1,227 @@
+<?xml version="1.0" encoding="ISO-8859-1" ?>
+  <feed xmlns="http://www.w3.org/2005/Atom">
+    <author>
+      <email>webmaster@sec.gov</email>
+      <name>Webmaster</name>
+    </author>
+    <company-info>
+      <addresses>
+        <address type="mailing">
+          <city>NEW YORK</city>
+          <state>NY</state>
+          <street1>100 CROSBY STREET, SUITE 201</street1>
+          <zip>10012</zip>
+        </address>
+        <address type="business">
+          <city>NEW YORK</city>
+          <phone>(646) 824-2220</phone>
+          <state>NY</state>
+          <street1>100 CROSBY STREET, SUITE 201</street1>
+          <zip>10012</zip>
+        </address>
+      </addresses>
+      <assigned-sic>6770</assigned-sic>
+      <assigned-sic-desc>BLANK CHECKS</assigned-sic-desc>
+      <assigned-sic-href>https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&amp;SIC=6770&amp;owner=include&amp;count=10</assigned-sic-href>
+      <cik>0001841948</cik>
+      <cik-href>https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&amp;CIK=0001841948&amp;owner=include&amp;count=10</cik-href>
+      <conformed-name>Lerer Hippeau Acquisition Corp.</conformed-name>
+      <state-location>NY</state-location>
+      <state-location-href>https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&amp;State=NY&amp;owner=include&amp;count=10</state-location-href>
+    </company-info>
+    <entry>
+      <category label="form type" scheme="https://www.sec.gov/" term="SC 13G/A" />
+      <content type="text/xml">
+        <accession-number>0001140361-23-006589</accession-number>
+        <act>34</act>
+        <amend>[Amend]</amend>
+        <file-number>005-92337</file-number>
+        <file-number-href>https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&amp;filenum=005-92337&amp;owner=include&amp;count=10</file-number-href>
+        <filing-date>2023-02-14</filing-date>
+        <filing-href>https://www.sec.gov/Archives/edgar/data/1841948/000114036123006589/0001140361-23-006589-index.htm</filing-href>
+        <filing-type>SC 13G/A</filing-type>
+        <film-number>23623773</film-number>
+        <form-name>Statement of Beneficial Ownership by Certain Investors</form-name>
+        <size>119 KB</size>
+      </content>
+      <id>urn:tag:sec.gov,2008:accession-number=0001140361-23-006589</id>
+      <link href="https://www.sec.gov/Archives/edgar/data/1841948/000114036123006589/0001140361-23-006589-index.htm" rel="alternate" type="text/html" />
+      <summary type="html"> &lt;b&gt;Filed:&lt;/b&gt; 2023-02-14 &lt;b&gt;AccNo:&lt;/b&gt; 0001140361-23-006589 &lt;b&gt;Size:&lt;/b&gt; 119 KB</summary>
+      <title>SC 13G/A [Amend]  - Statement of Beneficial Ownership by Certain Investors</title>
+      <updated>2023-02-14T10:00:28-05:00</updated>
+    </entry>
+    <entry>
+      <category label="form type" scheme="https://www.sec.gov/" term="SC 13G/A" />
+      <content type="text/xml">
+        <accession-number>0001104659-23-020654</accession-number>
+        <act>34</act>
+        <amend>[Amend]</amend>
+        <file-number>005-92337</file-number>
+        <file-number-href>https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&amp;filenum=005-92337&amp;owner=include&amp;count=10</file-number-href>
+        <filing-date>2023-02-14</filing-date>
+        <filing-href>https://www.sec.gov/Archives/edgar/data/1841948/000110465923020654/0001104659-23-020654-index.htm</filing-href>
+        <filing-type>SC 13G/A</filing-type>
+        <film-number>23622515</film-number>
+        <form-name>Statement of Beneficial Ownership by Certain Investors</form-name>
+        <size>134 KB</size>
+      </content>
+      <id>urn:tag:sec.gov,2008:accession-number=0001104659-23-020654</id>
+      <link href="https://www.sec.gov/Archives/edgar/data/1841948/000110465923020654/0001104659-23-020654-index.htm" rel="alternate" type="text/html" />
+      <summary type="html"> &lt;b&gt;Filed:&lt;/b&gt; 2023-02-14 &lt;b&gt;AccNo:&lt;/b&gt; 0001104659-23-020654 &lt;b&gt;Size:&lt;/b&gt; 134 KB</summary>
+      <title>SC 13G/A [Amend]  - Statement of Beneficial Ownership by Certain Investors</title>
+      <updated>2023-02-14T07:41:32-05:00</updated>
+    </entry>
+    <entry>
+      <category label="form type" scheme="https://www.sec.gov/" term="SC 13G/A" />
+      <content type="text/xml">
+        <accession-number>0001193125-22-309132</accession-number>
+        <act>34</act>
+        <amend>[Amend]</amend>
+        <file-number>005-92337</file-number>
+        <file-number-href>https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&amp;filenum=005-92337&amp;owner=include&amp;count=10</file-number-href>
+        <filing-date>2022-12-20</filing-date>
+        <filing-href>https://www.sec.gov/Archives/edgar/data/1841948/000119312522309132/0001193125-22-309132-index.htm</filing-href>
+        <filing-type>SC 13G/A</filing-type>
+        <film-number>221474784</film-number>
+        <form-name>Statement of Beneficial Ownership by Certain Investors</form-name>
+        <size>85 KB</size>
+      </content>
+      <id>urn:tag:sec.gov,2008:accession-number=0001193125-22-309132</id>
+      <link href="https://www.sec.gov/Archives/edgar/data/1841948/000119312522309132/0001193125-22-309132-index.htm" rel="alternate" type="text/html" />
+      <summary type="html"> &lt;b&gt;Filed:&lt;/b&gt; 2022-12-20 &lt;b&gt;AccNo:&lt;/b&gt; 0001193125-22-309132 &lt;b&gt;Size:&lt;/b&gt; 85 KB</summary>
+      <title>SC 13G/A [Amend]  - Statement of Beneficial Ownership by Certain Investors</title>
+      <updated>2022-12-20T16:05:55-05:00</updated>
+    </entry>
+    <entry>
+      <category label="form type" scheme="https://www.sec.gov/" term="15-12G" />
+      <content type="text/xml">
+        <accession-number>0001193125-22-308314</accession-number>
+        <act>34</act>
+        <file-number>001-40168</file-number>
+        <file-number-href>https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&amp;filenum=001-40168&amp;owner=include&amp;count=10</file-number-href>
+        <filing-date>2022-12-19</filing-date>
+        <filing-href>https://www.sec.gov/Archives/edgar/data/1841948/000119312522308314/0001193125-22-308314-index.htm</filing-href>
+        <filing-type>15-12G</filing-type>
+        <film-number>221471112</film-number>
+        <form-name>Securities registration termination [Section 12(g)]</form-name>
+        <size>10 KB</size>
+      </content>
+      <id>urn:tag:sec.gov,2008:accession-number=0001193125-22-308314</id>
+      <link href="https://www.sec.gov/Archives/edgar/data/1841948/000119312522308314/0001193125-22-308314-index.htm" rel="alternate" type="text/html" />
+      <summary type="html"> &lt;b&gt;Filed:&lt;/b&gt; 2022-12-19 &lt;b&gt;AccNo:&lt;/b&gt; 0001193125-22-308314 &lt;b&gt;Size:&lt;/b&gt; 10 KB</summary>
+      <title>15-12G  - Securities registration termination [Section 12(g)]</title>
+      <updated>2022-12-19T16:05:56-05:00</updated>
+    </entry>
+    <entry>
+      <category label="form type" scheme="https://www.sec.gov/" term="4" />
+      <content type="text/xml">
+        <accession-number>0000899243-22-038820</accession-number>
+        <filing-date>2022-12-16</filing-date>
+        <filing-href>https://www.sec.gov/Archives/edgar/data/1841948/000089924322038820/0000899243-22-038820-index.htm</filing-href>
+        <filing-type>4</filing-type>
+        <form-name>Statement of changes in beneficial ownership of securities</form-name>
+        <size>9 KB</size>
+      </content>
+      <id>urn:tag:sec.gov,2008:accession-number=0000899243-22-038820</id>
+      <link href="https://www.sec.gov/Archives/edgar/data/1841948/000089924322038820/0000899243-22-038820-index.htm" rel="alternate" type="text/html" />
+      <summary type="html"> &lt;b&gt;Filed:&lt;/b&gt; 2022-12-16 &lt;b&gt;AccNo:&lt;/b&gt; 0000899243-22-038820 &lt;b&gt;Size:&lt;/b&gt; 9 KB</summary>
+      <title>4  - Statement of changes in beneficial ownership of securities</title>
+      <updated>2022-12-16T16:06:50-05:00</updated>
+    </entry>
+    <entry>
+      <category label="form type" scheme="https://www.sec.gov/" term="4" />
+      <content type="text/xml">
+        <accession-number>0000899243-22-038814</accession-number>
+        <filing-date>2022-12-16</filing-date>
+        <filing-href>https://www.sec.gov/Archives/edgar/data/1841948/000089924322038814/0000899243-22-038814-index.htm</filing-href>
+        <filing-type>4</filing-type>
+        <form-name>Statement of changes in beneficial ownership of securities</form-name>
+        <size>8 KB</size>
+      </content>
+      <id>urn:tag:sec.gov,2008:accession-number=0000899243-22-038814</id>
+      <link href="https://www.sec.gov/Archives/edgar/data/1841948/000089924322038814/0000899243-22-038814-index.htm" rel="alternate" type="text/html" />
+      <summary type="html"> &lt;b&gt;Filed:&lt;/b&gt; 2022-12-16 &lt;b&gt;AccNo:&lt;/b&gt; 0000899243-22-038814 &lt;b&gt;Size:&lt;/b&gt; 8 KB</summary>
+      <title>4  - Statement of changes in beneficial ownership of securities</title>
+      <updated>2022-12-16T16:06:11-05:00</updated>
+    </entry>
+    <entry>
+      <category label="form type" scheme="https://www.sec.gov/" term="4" />
+      <content type="text/xml">
+        <accession-number>0000899243-22-038811</accession-number>
+        <filing-date>2022-12-16</filing-date>
+        <filing-href>https://www.sec.gov/Archives/edgar/data/1841948/000089924322038811/0000899243-22-038811-index.htm</filing-href>
+        <filing-type>4</filing-type>
+        <form-name>Statement of changes in beneficial ownership of securities</form-name>
+        <size>9 KB</size>
+      </content>
+      <id>urn:tag:sec.gov,2008:accession-number=0000899243-22-038811</id>
+      <link href="https://www.sec.gov/Archives/edgar/data/1841948/000089924322038811/0000899243-22-038811-index.htm" rel="alternate" type="text/html" />
+      <summary type="html"> &lt;b&gt;Filed:&lt;/b&gt; 2022-12-16 &lt;b&gt;AccNo:&lt;/b&gt; 0000899243-22-038811 &lt;b&gt;Size:&lt;/b&gt; 9 KB</summary>
+      <title>4  - Statement of changes in beneficial ownership of securities</title>
+      <updated>2022-12-16T16:05:45-05:00</updated>
+    </entry>
+    <entry>
+      <category label="form type" scheme="https://www.sec.gov/" term="4" />
+      <content type="text/xml">
+        <accession-number>0000899243-22-038806</accession-number>
+        <filing-date>2022-12-16</filing-date>
+        <filing-href>https://www.sec.gov/Archives/edgar/data/1841948/000089924322038806/0000899243-22-038806-index.htm</filing-href>
+        <filing-type>4</filing-type>
+        <form-name>Statement of changes in beneficial ownership of securities</form-name>
+        <size>9 KB</size>
+      </content>
+      <id>urn:tag:sec.gov,2008:accession-number=0000899243-22-038806</id>
+      <link href="https://www.sec.gov/Archives/edgar/data/1841948/000089924322038806/0000899243-22-038806-index.htm" rel="alternate" type="text/html" />
+      <summary type="html"> &lt;b&gt;Filed:&lt;/b&gt; 2022-12-16 &lt;b&gt;AccNo:&lt;/b&gt; 0000899243-22-038806 &lt;b&gt;Size:&lt;/b&gt; 9 KB</summary>
+      <title>4  - Statement of changes in beneficial ownership of securities</title>
+      <updated>2022-12-16T16:05:23-05:00</updated>
+    </entry>
+    <entry>
+      <category label="form type" scheme="https://www.sec.gov/" term="25-NSE" />
+      <content type="text/xml">
+        <accession-number>0001354457-22-000719</accession-number>
+        <act>34</act>
+        <file-number>333-253066</file-number>
+        <file-number-href>https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&amp;filenum=333-253066&amp;owner=include&amp;count=10</file-number-href>
+        <filing-date>2022-12-13</filing-date>
+        <filing-href>https://www.sec.gov/Archives/edgar/data/1841948/000135445722000719/0001354457-22-000719-index.htm</filing-href>
+        <filing-type>25-NSE</filing-type>
+        <film-number>221459744</film-number>
+        <form-name>Notification filed by national security exchange to report the removal from listing and registration of matured, redeemed or retired securities</form-name>
+        <size>2 KB</size>
+      </content>
+      <id>urn:tag:sec.gov,2008:accession-number=0001354457-22-000719</id>
+      <link href="https://www.sec.gov/Archives/edgar/data/1841948/000135445722000719/0001354457-22-000719-index.htm" rel="alternate" type="text/html" />
+      <summary type="html"> &lt;b&gt;Filed:&lt;/b&gt; 2022-12-13 &lt;b&gt;AccNo:&lt;/b&gt; 0001354457-22-000719 &lt;b&gt;Size:&lt;/b&gt; 2 KB</summary>
+      <title>25-NSE  - Notification filed by national security exchange to report the removal from listing and registration of matured, redeemed or retired securities</title>
+      <updated>2022-12-13T16:05:43-05:00</updated>
+    </entry>
+    <entry>
+      <category label="form type" scheme="https://www.sec.gov/" term="8-K" />
+      <content type="text/xml">
+        <accession-number>0001193125-22-301869</accession-number>
+        <act>34</act>
+        <file-number>001-40168</file-number>
+        <file-number-href>https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&amp;filenum=001-40168&amp;owner=include&amp;count=10</file-number-href>
+        <filing-date>2022-12-09</filing-date>
+        <filing-href>https://www.sec.gov/Archives/edgar/data/1841948/000119312522301869/0001193125-22-301869-index.htm</filing-href>
+        <filing-type>8-K</filing-type>
+        <film-number>221455475</film-number>
+        <form-name>Current report</form-name>
+        <items-desc>items 3.01, 8.01and9.01</items-desc>
+        <size>168 KB</size>
+        <xbrl_href>https://www.sec.gov/cgi-bin/viewer?action=view&amp;cik=1841948&amp;accession_number=0001193125-22-301869&amp;xbrl_type=v</xbrl_href>
+      </content>
+      <id>urn:tag:sec.gov,2008:accession-number=0001193125-22-301869</id>
+      <link href="https://www.sec.gov/Archives/edgar/data/1841948/000119312522301869/0001193125-22-301869-index.htm" rel="alternate" type="text/html" />
+      <summary type="html"> &lt;b&gt;Filed:&lt;/b&gt; 2022-12-09 &lt;b&gt;AccNo:&lt;/b&gt; 0001193125-22-301869 &lt;b&gt;Size:&lt;/b&gt; 168 KB&lt;br&gt;Item 3.01: Notice of Delisting or Failure to Satisfy a Continued Listing Rule or Standard; Transfer of Listing&lt;br&gt;Item 8.01: Other Events&lt;br&gt;Item 9.01: Financial Statements and Exhibits</summary>
+      <title>8-K  - Current report</title>
+      <updated>2022-12-09T17:01:13-05:00</updated>
+    </entry>
+    <id>https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&amp;CIK=0001841948</id>
+    <link href="https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&amp;CIK=1841948&amp;owner=include&amp;start=0&amp;count=10" rel="alternate" type="text/html" />
+    <link href="https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&amp;CIK=1841948&amp;owner=include&amp;start=0&amp;count=10&amp;output=atom" rel="self" type="application/atom+xml" />
+    <link href="https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&amp;CIK=0001841948&amp;type=&amp;datea=&amp;dateb=&amp;owner=include&amp;count=10&amp;output=atom&amp;start=10" rel="next" type="application/atom+xml" />
+    <title>Lerer Hippeau Acquisition Corp.  (0001841948)</title>
+    <updated>2026-09-30T18:31:03-04:00</updated>
+  </feed>

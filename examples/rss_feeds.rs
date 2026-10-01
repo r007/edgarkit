@@ -42,7 +42,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
         println!("✓ Conformed Name: {}", company_info.conformed_name);
         println!(
             "✓ SIC: {} - {}",
-            company_info.assigned_sic, company_info.assigned_sic_desc
+            company_info.assigned_sic.as_deref().unwrap_or("N/A"),
+            company_info.assigned_sic_desc.as_deref().unwrap_or("N/A")
         );
     }
 
