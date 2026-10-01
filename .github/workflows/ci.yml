@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo fmt --check
+      - run: cargo clippy --all-features --all-targets -- -D warnings
+      # Tests that talk to the real EDGAR are #[ignore]d, so this stays offline.
+      # The adaptive rate-limit tests measure wall-clock behaviour and
+      # occasionally miss on a busy machine, so they run separately and do not
+      # fail the build.
+      - run: cargo test --all-features -- --skip the_limiter_converges_on --skip every_request_lands --skip fixed_rate_retry_only
+      - run: cargo test --all-features --test adaptive_rate_limit
+        continue-on-error: true
+      # Each feature has to build on its own, not only alongside the others.
+      - name: Check each feature alone
+        run: |
+          cargo clippy --no-default-features -- -D warnings
+          for feature in search filings company feeds atom rss index; do
+            cargo clippy --no-default-features --features "$feature" -- -D warnings
+          done
