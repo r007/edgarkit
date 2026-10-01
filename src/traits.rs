@@ -24,8 +24,10 @@ use super::error::Result;
 use super::filings::{DetailedFiling, DirectoryResponse, Submission};
 #[cfg(feature = "index")]
 use super::index::{EdgarDay, EdgarPeriod, IndexResponse};
-#[cfg(any(feature = "filings", feature = "index", feature = "feeds"))]
-use super::options::{FeedOptions, FilingOptions};
+#[cfg(feature = "feeds")]
+use super::options::FeedOptions;
+#[cfg(any(feature = "filings", feature = "index"))]
+use super::options::FilingOptions;
 #[cfg(feature = "search")]
 use super::search::{Hit, SearchOptions, SearchResponse};
 #[cfg(feature = "feeds")]

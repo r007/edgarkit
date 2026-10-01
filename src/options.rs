@@ -3,7 +3,9 @@
 //! This module provides builder-style option structs for customizing filing queries
 //! and feed requests. Options use the builder pattern for clean, composable configuration.
 
+#[cfg(feature = "feeds")]
 use serde::Serialize;
+#[cfg(feature = "feeds")]
 use std::collections::HashMap;
 
 /// Options for filtering and configuring filing queries.
