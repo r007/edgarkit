@@ -61,8 +61,8 @@ impl FeedOperations for Edgar {
             .map_err(|e| EdgarError::InvalidResponse(e.to_string()))?;
 
         let url = format!(
-            "https://www.sec.gov/cgi-bin/browse-edgar?action=getcurrent&{}",
-            query
+            "{}/cgi-bin/browse-edgar?action=getcurrent&{}",
+            self.edgar_site_url, query
         );
 
         let content = self.get(&url).await?;
@@ -82,8 +82,8 @@ impl FeedOperations for Edgar {
             .map_err(|e| EdgarError::InvalidResponse(e.to_string()))?;
 
         let url = format!(
-            "https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&{}",
-            query
+            "{}/cgi-bin/browse-edgar?action=getcompany&{}",
+            self.edgar_site_url, query
         );
 
         let content = self.get(&url).await?;
@@ -110,79 +110,88 @@ impl FeedOperations for Edgar {
 
     /// Fetches the press release feed
     async fn press_release_feed(&self) -> Result<RssDocument> {
-        self.get_rss_feed("https://www.sec.gov/news/pressreleases.rss")
+        self.get_rss_feed(&format!("{}/news/pressreleases.rss", self.edgar_site_url))
             .await
     }
 
     /// Fetches the speeches and statements feed
     async fn speeches_and_statements_feed(&self) -> Result<RssDocument> {
-        self.get_rss_feed("https://www.sec.gov/news/speeches-statements.rss")
-            .await
+        self.get_rss_feed(&format!(
+            "{}/news/speeches-statements.rss",
+            self.edgar_site_url
+        ))
+        .await
     }
 
     /// Fetches the speeches feed
     async fn speeches_feed(&self) -> Result<RssDocument> {
-        self.get_rss_feed("https://www.sec.gov/news/speeches.rss")
+        self.get_rss_feed(&format!("{}/news/speeches.rss", self.edgar_site_url))
             .await
     }
 
     /// Fetches the statements feed
     async fn statements_feed(&self) -> Result<RssDocument> {
-        self.get_rss_feed("https://www.sec.gov/news/statements.rss")
+        self.get_rss_feed(&format!("{}/news/statements.rss", self.edgar_site_url))
             .await
     }
 
     /// Fetches the testimony feed
     async fn testimony_feed(&self) -> Result<RssDocument> {
-        self.get_rss_feed("https://www.sec.gov/news/testimony.rss")
+        self.get_rss_feed(&format!("{}/news/testimony.rss", self.edgar_site_url))
             .await
     }
 
     /// Fetches the administrative proceedings feed
     async fn administrative_proceedings_feed(&self) -> Result<RssDocument> {
-        self.get_rss_feed("https://www.sec.gov/rss/litigation/admin.xml")
+        self.get_rss_feed(&format!("{}/rss/litigation/admin.xml", self.edgar_site_url))
             .await
     }
 
     /// Fetches the division of corporation finance feed
     async fn division_of_corporation_finance_feed(&self) -> Result<RssDocument> {
-        self.get_rss_feed("https://www.sec.gov/rss/divisions/corpfin/cfnew.xml")
-            .await
+        self.get_rss_feed(&format!(
+            "{}/rss/divisions/corpfin/cfnew.xml",
+            self.edgar_site_url
+        ))
+        .await
     }
 
     /// Fetches the division of investment management feed
     async fn division_of_investment_management_feed(&self) -> Result<RssDocument> {
-        self.get_rss_feed("https://www.sec.gov/rss/divisions/investment/imnews.xml")
-            .await
+        self.get_rss_feed(&format!(
+            "{}/rss/divisions/investment/imnews.xml",
+            self.edgar_site_url
+        ))
+        .await
     }
 
     /// Fetches the investor alerts feed
     async fn investor_alerts_feed(&self) -> Result<RssDocument> {
-        self.get_rss_feed("https://www.sec.gov/rss/investor/alerts")
+        self.get_rss_feed(&format!("{}/rss/investor/alerts", self.edgar_site_url))
             .await
     }
 
     /// Fetches the filings feed
     async fn filings_feed(&self) -> Result<RssDocument> {
-        self.get_rss_feed("https://www.sec.gov/Archives/edgar/usgaap.rss.xml")
+        self.get_rss_feed(&format!("{}/usgaap.rss.xml", self.edgar_archives_url))
             .await
     }
 
     /// Fetches the mutual funds feed
     async fn mutual_funds_feed(&self) -> Result<RssDocument> {
-        self.get_rss_feed("https://www.sec.gov/Archives/edgar/xbrl-rr.rss.xml")
+        self.get_rss_feed(&format!("{}/xbrl-rr.rss.xml", self.edgar_archives_url))
             .await
     }
 
     /// Fetches the XBRL feed
     async fn xbrl_feed(&self) -> Result<RssDocument> {
-        self.get_rss_feed("https://www.sec.gov/Archives/edgar/xbrlrss.all.xml")
+        self.get_rss_feed(&format!("{}/xbrlrss.all.xml", self.edgar_archives_url))
             .await
     }
 
     /// Fetches the inline XBRL feed
     async fn inline_xbrl_feed(&self) -> Result<RssDocument> {
-        self.get_rss_feed("https://www.sec.gov/Archives/edgar/xbrl-inline.rss.xml")
+        self.get_rss_feed(&format!("{}/xbrl-inline.rss.xml", self.edgar_archives_url))
             .await
     }
 
@@ -196,8 +205,8 @@ impl FeedOperations for Edgar {
         }
 
         let url = format!(
-            "https://www.sec.gov/Archives/edgar/monthly/xbrlrss-{}-{:02}.xml",
-            year, month
+            "{}/monthly/xbrlrss-{}-{:02}.xml",
+            self.edgar_archives_url, year, month
         );
         self.get_rss_feed(&url).await
     }

@@ -55,6 +55,16 @@ pub struct EdgarConfig {
 /// the data domain provides structured API access, and the files domain serves
 /// various data files. You typically won't need to change these unless you're
 /// running tests against a mock server.
+///
+/// To override only some of them, start from the defaults:
+///
+/// ```rust
+/// # use edgarkit::EdgarUrls;
+/// let urls = EdgarUrls {
+///     site: "http://127.0.0.1:8080".to_string(),
+///     ..EdgarUrls::default()
+/// };
+/// ```
 #[derive(Debug, Clone)]
 pub struct EdgarUrls {
     /// Archives base URL (historical filings)
@@ -68,6 +78,10 @@ pub struct EdgarUrls {
 
     /// Search API base URL
     pub search: String,
+
+    /// Main site base URL (the Atom feeds under `/cgi-bin/browse-edgar` and the
+    /// news RSS feeds under `/news` and `/rss`)
+    pub site: String,
 }
 
 impl Default for EdgarConfig {
@@ -76,12 +90,7 @@ impl Default for EdgarConfig {
             user_agent: "edgarkit/0.1.0".to_string(),
             rate_limit: 10,
             timeout: Duration::from_secs(30),
-            base_urls: EdgarUrls {
-                archives: "https://www.sec.gov/Archives/edgar".to_string(),
-                data: "https://data.sec.gov".to_string(),
-                files: "https://www.sec.gov/files".to_string(),
-                search: "https://efts.sec.gov/LATEST/search-index/".to_string(),
-            },
+            base_urls: EdgarUrls::default(),
         }
     }
 }
@@ -124,6 +133,7 @@ impl Default for EdgarUrls {
             data: "https://data.sec.gov".to_string(),
             files: "https://www.sec.gov/files".to_string(),
             search: "https://efts.sec.gov/LATEST/search-index/".to_string(),
+            site: "https://www.sec.gov".to_string(),
         }
     }
 }

@@ -190,6 +190,9 @@ pub struct Edgar {
 
     /// Base URL for EDGAR search endpoint
     pub(crate) edgar_search_url: String,
+
+    /// Base URL for the main SEC site (Atom and news RSS feeds)
+    pub(crate) edgar_site_url: String,
 }
 
 /// HTTP client for accessing the SEC EDGAR API with built-in rate limiting and retry logic.
@@ -353,6 +356,7 @@ impl Edgar {
             edgar_data_url: config.base_urls.data,
             edgar_files_url: config.base_urls.files,
             edgar_search_url: config.base_urls.search,
+            edgar_site_url: config.base_urls.site,
         })
     }
 
@@ -765,6 +769,15 @@ impl Edgar {
     /// A string slice containing the base URL for accessing EDGAR search endpoints.
     pub fn search_url(&self) -> &str {
         &self.edgar_search_url
+    }
+
+    /// Returns the base URL for the main SEC site.
+    ///
+    /// # Returns
+    ///
+    /// A string slice containing the base URL the Atom and news RSS feeds are fetched from.
+    pub fn site_url(&self) -> &str {
+        &self.edgar_site_url
     }
 }
 
