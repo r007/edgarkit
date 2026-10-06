@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-06
+
+### Breaking Changes
+
+- `FrameDataPoint::val` is now `f64` instead of `u64`. A frame for a concept that can be negative or fractional (`NetIncomeLoss`, `EarningsPerShareBasic`, ...) used to fail to parse as a whole
+- `EdgarUrls` has a new `site` field, the base URL the Atom and news RSS feeds are fetched from. Code that builds an `EdgarUrls` with a struct literal needs to set it, or take the rest from `..EdgarUrls::default()`
+- New public fields on structs that could previously be built with a struct literal: `TaxonomyGroups::other`, `FrameDataPoint::start` and `SearchResponse::query`
+
+### Fixed
+
+- `company_facts` no longer fails for recently registered filers. EDGAR sends their CIK as a zero-padded string (`"0001999001"`) rather than a number; `CompanyFacts::cik`, `CompanyConcept::cik` and `FrameDataPoint::cik` accept both
+- `company_facts` no longer fails for filers with no `us-gaap` facts, such as foreign private issuers reporting under IFRS. `TaxonomyGroups::us_gaap` and `dei` are empty when EDGAR omits them
+- `SearchOptions::with_sic` now filters. It was sent as `sic`, which the search endpoint ignores; the endpoint reads `sics`. Several codes can be passed separated by commas
+- A search no longer returns another SIC filter's results out of EDGAR's cache. The cache key EDGAR uses leaves the SIC filter out, so for a few minutes after a query runs, the same query with a different SIC filter, or none, can be answered with the cached response. `search` checks the query EDGAR echoes back, repeats the request under a different cache key when the filter does not match, and returns `EdgarError::InvalidResponse` if it still cannot get a response for the filter that was asked for
+- `SearchOptions::with_incorporated_location` now takes effect. It was sent as `incorporated_location`; the endpoint reads `locationType`
+- `SearchOptions::with_location_code` now filters. It was sent as `locationCode`, which the endpoint ignores, and is now sent as `locationCodes` together with any codes from `with_location_codes`
+- `SearchOptions::with_page` now returns the requested page. The endpoint paginates by offset alone and ignores `page`, so every page number returned the first page unless `with_from` was set as well
+
+### Added
+
+- `EdgarUrls::site` and `Edgar::site_url()`. Every feed is now fetched from the configured base URLs (`site` for the Atom and news RSS feeds, `archives` for the XBRL RSS feeds) instead of a hard-coded `https://www.sec.gov`, so feeds can be pointed at a mock server like the other endpoints
+- `TaxonomyGroups::other`, holding every taxonomy besides `us-gaap` and `dei` (`ifrs-full`, `srt`, `ecd`, `ffd`, ...) keyed by name. These were silently dropped before
+- `FrameDataPoint::start`, the period start date EDGAR sends on frames that span a period
+- `SearchResponse::query`, the Elasticsearch query EDGAR echoes back, showing which filters a response was actually computed with
+- Types that appear in public fields but could not be named are now exported from the crate root: `DataPoint`, `Fact`, `TaxonomyGroups` and `FrameDataPoint` (company); `Address`, `Addresses`, `FormerName`, `FilingsData`, `FilingFile` and `RecentFilings` (filings); `Source` and `Shards` (search); `ItemType`, and the index listing types as `IndexDirectory` and `IndexDirectoryItem`
+
 ## [0.5.1] - 2026-10-01
 
 ### Fixed
@@ -111,7 +137,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Comprehensive examples: basic usage, filing downloads, index operations, RSS feeds, search
 - Optional mini-project examples: investment-adviser CLI and IPO scanner TUI (S-1 filings)
 
-[Unreleased]: https://github.com/r007/edgarkit/compare/v0.5.1...HEAD
+[Unreleased]: https://github.com/r007/edgarkit/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/r007/edgarkit/compare/v0.5.1...v0.6.0
 [0.5.1]: https://github.com/r007/edgarkit/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/r007/edgarkit/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/r007/edgarkit/compare/v0.3.0...v0.4.0

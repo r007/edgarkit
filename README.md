@@ -48,7 +48,7 @@ Add EdgarKit to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-edgarkit = "0.5.1"
+edgarkit = "0.6.0"
 tokio = { version = "1", features = ["full"] }
 ```
 
@@ -58,7 +58,7 @@ EdgarKit uses feature flags to allow you to compile only what you need:
 
 ```toml
 [dependencies]
-edgarkit = { version = "0.5.1", features = ["search", "filings", "company"] }
+edgarkit = { version = "0.6.0", features = ["search", "filings", "company"] }
 ```
 
 Available features:
