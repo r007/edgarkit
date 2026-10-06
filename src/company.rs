@@ -13,8 +13,43 @@ use super::CompanyOperations;
 use super::Edgar;
 use super::error::{EdgarError, Result};
 use async_trait::async_trait;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, de};
 use std::collections::HashMap;
+
+/// Deserializes a CIK that EDGAR sends either as a number or as a zero-padded string.
+///
+/// The XBRL endpoints send `"cik": 320193` for long-standing filers and
+/// `"cik": "0001999001"` for recently registered ones.
+fn deserialize_cik<'de, D>(deserializer: D) -> std::result::Result<u64, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    struct CikVisitor;
+
+    impl<'de> de::Visitor<'de> for CikVisitor {
+        type Value = u64;
+
+        fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+            formatter.write_str("a CIK as an integer or a string containing an integer")
+        }
+
+        fn visit_u64<E>(self, value: u64) -> std::result::Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            Ok(value)
+        }
+
+        fn visit_str<E>(self, value: &str) -> std::result::Result<Self::Value, E>
+        where
+            E: de::Error,
+        {
+            value.trim().parse().map_err(de::Error::custom)
+        }
+    }
+
+    deserializer.deserialize_any(CikVisitor)
+}
 
 /// Mapping between stock ticker symbols and company CIKs.
 ///
@@ -68,6 +103,7 @@ pub struct CompanyTickerExchange {
 /// which is more focused and lightweight.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CompanyFacts {
+    #[serde(deserialize_with = "deserialize_cik")]
     pub cik: u64,
     #[serde(rename = "entityName")]
     pub entity_name: String,
@@ -80,11 +116,19 @@ pub struct CompanyFacts {
 /// The SEC's XBRL data uses different taxonomies for different types of information.
 /// US-GAAP (Generally Accepted Accounting Principles) contains financial statement data,
 /// while DEI (Document and Entity Information) contains metadata about the company and filing.
+///
+/// Not every filer reports under both. A foreign private issuer reporting under IFRS has
+/// no `us-gaap` facts at all, so `us_gaap` is empty and its financial statement data is
+/// under `other["ifrs-full"]`. Every taxonomy EDGAR sends besides `us-gaap` and `dei`
+/// (`ifrs-full`, `srt`, `ecd`, `ffd`, `invest`, ...) is kept in `other`, keyed by its name.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TaxonomyGroups {
-    #[serde(rename = "us-gaap")]
+    #[serde(rename = "us-gaap", default)]
     pub us_gaap: HashMap<String, Fact>,
+    #[serde(default)]
     pub dei: HashMap<String, Fact>,
+    #[serde(flatten)]
+    pub other: HashMap<String, HashMap<String, Fact>>,
 }
 
 /// A single XBRL concept with its data points across different units of measure.
@@ -136,6 +180,7 @@ pub struct DataPoint {
 /// analysis or time-series construction.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CompanyConcept {
+    #[serde(deserialize_with = "deserialize_cik")]
     pub cik: u64,
     pub taxonomy: String,
     pub tag: String,
@@ -174,14 +219,21 @@ pub struct Frame {
 /// Represents one company's reported value for the concept and time period specified
 /// in the parent `Frame`. Includes entity identification, location, the actual value,
 /// and a reference to the source filing.
+///
+/// `val` is an `f64` because a frame holds whatever the concept reports: a net loss is
+/// negative and a per-share amount is fractional. `start` is present on frames that span
+/// a period (`CY2023`, `CY2023Q1`) and absent on instantaneous ones (`CY2023Q4I`).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FrameDataPoint {
     #[serde(rename = "entityName")]
     pub entity_name: String,
+    #[serde(deserialize_with = "deserialize_cik")]
     pub cik: u64,
-    pub val: u64,
+    pub val: f64,
     pub accn: String,
     pub loc: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub start: Option<String>,
     pub end: String,
 }
 
