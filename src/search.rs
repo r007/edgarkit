@@ -66,6 +66,36 @@ pub struct SearchResponse {
 
     /// Search results
     pub hits: Hits,
+
+    /// The Elasticsearch query EDGAR ran to produce this response, echoed back verbatim.
+    ///
+    /// This is the ground truth for which filters were applied. It can differ from the
+    /// request when EDGAR answers from its cache; see [`SearchOptions::with_sic`].
+    #[serde(default)]
+    pub query: Option<serde_json::Value>,
+}
+
+impl SearchResponse {
+    /// SIC codes this response was filtered by, read from the echoed query.
+    ///
+    /// Returns `None` when the response carries no echo to read.
+    fn echoed_sics(&self) -> Option<Vec<&str>> {
+        let filters = self
+            .query
+            .as_ref()?
+            .pointer("/query/bool/filter")?
+            .as_array()?;
+
+        let mut sics: Vec<&str> = filters
+            .iter()
+            .filter_map(|filter| filter.pointer("/terms/sics")?.as_array())
+            .flatten()
+            .filter_map(|sic| sic.as_str())
+            .collect();
+        sics.sort_unstable();
+        sics.dedup();
+        Some(sics)
+    }
 }
 
 /// Information about Elasticsearch shards that processed the search query.
@@ -261,7 +291,8 @@ pub struct SearchOptions {
     /// Filter by multiple location codes
     pub location_codes: Option<Vec<String>>,
 
-    /// Page number for pagination
+    /// Page number for pagination, starting from 1 (sent as the offset it stands
+    /// for; `from` takes precedence when both are set)
     pub page: Option<u32>,
 
     /// Number of results to skip
@@ -285,12 +316,27 @@ pub struct SearchOptions {
     /// CIK codes to search (cannot combine with name or sic)
     pub ciks: Option<Vec<String>>,
 
-    /// Standard Industrial Classification code
+    /// Standard Industrial Classification code, or several separated by commas
     pub sic: Option<String>,
 
     /// Use incorporation location instead of HQ location
     pub incorporated_location: Option<bool>,
 }
+
+/// Results per page. The endpoint always returns pages of this size.
+const PAGE_SIZE: u32 = 100;
+
+/// Parameters that give a request a different key in EDGAR's response cache without
+/// changing what it asks for: an empty entity name and the default location type.
+///
+/// The cache key leaves the SIC filter out, so a search can be answered with a
+/// response computed for another SIC filter. When that happens the search is
+/// repeated with one of these added, which lands it on a different cache entry.
+const CACHE_KEY_VARIATIONS: [Option<(&str, &str)>; 3] = [
+    None,
+    Some(("entityName", "")),
+    Some(("locationType", "located")),
+];
 
 /// Custom deserializer for sequence field that can be either u32 or string
 fn deserialize_sequence<'de, D>(deserializer: D) -> std::result::Result<u32, D::Error>
@@ -380,7 +426,9 @@ impl SearchOptions {
         self
     }
 
-    /// Sets the page number for pagination (starting from 1)
+    /// Sets the page number for pagination (starting from 1).
+    ///
+    /// Pages hold 100 results. An offset set with `with_from` takes precedence.
     pub fn with_page(mut self, page: u32) -> Self {
         self.page = Some(page);
         self
@@ -451,18 +499,43 @@ impl SearchOptions {
         self.with_ciks(vec![cik.into()])
     }
 
-    /// Sets SIC code filter
+    /// Sets the SIC code filter. Pass several codes separated by commas
+    /// (`"3674,7372"`) to match filings from any of them.
+    ///
+    /// EDGAR caches search responses under a key that leaves the SIC filter out, so
+    /// for a few minutes after a query runs, the same query with a different SIC
+    /// filter (or with none) can be answered from that cached response. `search()`
+    /// detects this from the query EDGAR echoes back, re-requests under a different
+    /// cache key, and returns `EdgarError::InvalidResponse` if it still cannot get a
+    /// response for the filter that was asked for, rather than returning filings
+    /// from the wrong industries.
     pub fn with_sic(mut self, sic: impl Into<String>) -> Self {
         self.sic = Some(sic.into());
         self
     }
 
-    /// Sets whether to use incorporation location instead of HQ
+    /// Sets whether the location filter matches where a company is incorporated
+    /// instead of where it is headquartered
     pub fn with_incorporated_location(mut self, incorporated: bool) -> Self {
         self.incorporated_location = Some(incorporated);
         self
     }
 
+    /// The requested SIC codes, trimmed, sorted and deduplicated.
+    fn sic_codes(&self) -> Vec<&str> {
+        let mut sics: Vec<&str> = self
+            .sic
+            .iter()
+            .flat_map(|sic| sic.split(','))
+            .map(str::trim)
+            .filter(|sic| !sic.is_empty())
+            .collect();
+        sics.sort_unstable();
+        sics.dedup();
+        sics
+    }
+
+    /// Builds the query parameters the EDGAR search endpoint reads.
     pub fn to_query_params(&self) -> Vec<(String, String)> {
         let mut params = Vec::new();
 
@@ -478,10 +551,6 @@ impl SearchOptions {
             params.push(("category".to_string(), category.clone()));
         }
 
-        if let Some(ref code) = self.location_code {
-            params.push(("locationCode".to_string(), code.clone()));
-        }
-
         if let Some(ref name) = self.entity_name {
             params.push(("entityName".to_string(), name.clone()));
         }
@@ -490,15 +559,28 @@ impl SearchOptions {
             params.push(("forms".to_string(), forms.join(",")));
         }
 
-        if let Some(ref codes) = self.location_codes {
-            params.push(("locationCodes".to_string(), codes.join(",")));
+        // The endpoint only reads `locationCodes`; a lone `locationCode` is ignored.
+        let location_codes: Vec<&str> = self
+            .location_code
+            .iter()
+            .chain(self.location_codes.iter().flatten())
+            .map(String::as_str)
+            .collect();
+        if !location_codes.is_empty() {
+            params.push(("locationCodes".to_string(), location_codes.join(",")));
         }
 
         if let Some(page) = self.page {
             params.push(("page".to_string(), page.to_string()));
         }
 
-        if let Some(from) = self.from {
+        // The endpoint paginates by offset alone and ignores `page`, so a page
+        // number has to be sent as the offset it stands for.
+        let from = self.from.or(self
+            .page
+            .filter(|&page| page > 1)
+            .map(|page| (page - 1) * PAGE_SIZE));
+        if let Some(from) = from {
             params.push(("from".to_string(), from.to_string()));
         }
 
@@ -529,14 +611,20 @@ impl SearchOptions {
             params.push(("ciks".to_string(), ciks.join(",")));
         }
 
-        if let Some(ref sic) = self.sic {
-            params.push(("sic".to_string(), sic.clone()));
+        let sics = self.sic_codes();
+        if !sics.is_empty() {
+            params.push(("sics".to_string(), sics.join(",")));
         }
 
         if let Some(incorporated) = self.incorporated_location {
             params.push((
-                "incorporated_location".to_string(),
-                incorporated.to_string(),
+                "locationType".to_string(),
+                if incorporated {
+                    "incorporated"
+                } else {
+                    "located"
+                }
+                .to_string(),
             ));
         }
 
@@ -620,14 +708,39 @@ impl SearchOperations for Edgar {
     /// println!("This page has {} results", response.hits.hits.len());
     /// ```
     async fn search(&self, options: SearchOptions) -> Result<SearchResponse> {
-        let params = options.to_query_params();
-        let query_string = serde_urlencoded::to_string(&params)
-            .map_err(|e| EdgarError::InvalidResponse(e.to_string()))?;
+        let base_params = options.to_query_params();
+        let requested_sics = options.sic_codes();
 
-        let url = format!("{}?{}", self.search_url(), query_string);
-        let response = self.get(&url).await?;
+        for variation in CACHE_KEY_VARIATIONS {
+            let mut params = base_params.clone();
+            if let Some((key, value)) = variation {
+                if params.iter().any(|(name, _)| name == key) {
+                    continue;
+                }
+                params.push((key.to_string(), value.to_string()));
+            }
 
-        Ok(serde_json::from_str(&response)?)
+            let query_string = serde_urlencoded::to_string(&params)
+                .map_err(|e| EdgarError::InvalidResponse(e.to_string()))?;
+            let url = format!("{}?{}", self.search_url(), query_string);
+            let response: SearchResponse = serde_json::from_str(&self.get(&url).await?)?;
+
+            match response.echoed_sics() {
+                Some(echoed) if echoed != requested_sics => {
+                    tracing::warn!(
+                        "EDGAR answered a search for SIC {:?} from a cached response for SIC {:?}",
+                        requested_sics,
+                        echoed
+                    );
+                }
+                _ => return Ok(response),
+            }
+        }
+
+        Err(EdgarError::InvalidResponse(format!(
+            "EDGAR answered a search for SIC {:?} from a cached response for a different SIC filter; retry in a few minutes",
+            requested_sics
+        )))
     }
 
     /// Fetches all matching results across multiple pages with automatic pagination.
@@ -676,7 +789,6 @@ impl SearchOperations for Edgar {
     /// ```
     async fn search_all(&self, mut options: SearchOptions) -> Result<Vec<Hit>> {
         const BATCH_SIZE: u32 = 7; // Maximum number of concurrent requests
-        const PAGE_SIZE: u32 = 100; // Results per page
 
         // Set defaults
         options.count = Some(PAGE_SIZE);
@@ -758,5 +870,102 @@ mod tests {
         assert!(params.contains(&("forms".to_string(), "10-K,10-Q".to_string())));
         assert!(params.contains(&("count".to_string(), "10".to_string())));
         assert!(params.contains(&("reverse_order".to_string(), "TRUE".to_string())));
+    }
+
+    fn param<'a>(params: &'a [(String, String)], name: &str) -> Option<&'a str> {
+        params
+            .iter()
+            .find(|(key, _)| key == name)
+            .map(|(_, value)| value.as_str())
+    }
+
+    #[test]
+    fn sic_filter_is_sent_as_sics() {
+        let params = SearchOptions::new().with_sic("7372").to_query_params();
+
+        assert_eq!(param(&params, "sics"), Some("7372"));
+        assert_eq!(param(&params, "sic"), None);
+    }
+
+    #[test]
+    fn sic_codes_are_normalized() {
+        let params = SearchOptions::new()
+            .with_sic(" 7372, 3674,,7372 ")
+            .to_query_params();
+        assert_eq!(param(&params, "sics"), Some("3674,7372"));
+
+        let params = SearchOptions::new().with_sic(" ").to_query_params();
+        assert_eq!(param(&params, "sics"), None);
+    }
+
+    #[test]
+    fn incorporated_location_is_sent_as_location_type() {
+        let params = SearchOptions::new()
+            .with_incorporated_location(true)
+            .to_query_params();
+        assert_eq!(param(&params, "locationType"), Some("incorporated"));
+        assert_eq!(param(&params, "incorporated_location"), None);
+
+        let params = SearchOptions::new()
+            .with_incorporated_location(false)
+            .to_query_params();
+        assert_eq!(param(&params, "locationType"), Some("located"));
+    }
+
+    #[test]
+    fn location_filters_are_sent_as_location_codes() {
+        let params = SearchOptions::new()
+            .with_location_code("CA")
+            .to_query_params();
+        assert_eq!(param(&params, "locationCodes"), Some("CA"));
+        assert_eq!(param(&params, "locationCode"), None);
+
+        let params = SearchOptions::new()
+            .with_location_code("CA")
+            .with_location_codes(vec!["NY".to_string(), "DE".to_string()])
+            .to_query_params();
+        assert_eq!(param(&params, "locationCodes"), Some("CA,NY,DE"));
+    }
+
+    #[test]
+    fn page_is_sent_as_an_offset() {
+        let params = SearchOptions::new().with_page(3).to_query_params();
+        assert_eq!(param(&params, "from"), Some("200"));
+
+        let params = SearchOptions::new().with_page(1).to_query_params();
+        assert_eq!(param(&params, "from"), None);
+
+        // An explicit offset wins over the page number.
+        let params = SearchOptions::new()
+            .with_page(3)
+            .with_from(50)
+            .to_query_params();
+        assert_eq!(param(&params, "from"), Some("50"));
+    }
+
+    #[test]
+    fn echoed_sics_are_read_from_the_response() {
+        let response = |query: &str| -> SearchResponse {
+            serde_json::from_str(&format!(
+                r#"{{"took":1,"timed_out":false,
+                    "_shards":{{"total":1,"successful":1,"skipped":0,"failed":0}},
+                    "hits":{{"total":{{"value":0,"relation":"eq"}},"hits":[]}}{query}}}"#
+            ))
+            .unwrap()
+        };
+
+        let filtered = response(
+            r#","query":{"query":{"bool":{"filter":[
+                {"terms":{"root_forms":["10-K"]}},
+                {"terms":{"sics":["7372","3674"]}}]}}}"#,
+        );
+        assert_eq!(filtered.echoed_sics(), Some(vec!["3674", "7372"]));
+
+        let unfiltered = response(
+            r#","query":{"query":{"bool":{"filter":[{"terms":{"root_forms":["10-K"]}}]}}}"#,
+        );
+        assert_eq!(unfiltered.echoed_sics(), Some(vec![]));
+
+        assert_eq!(response("").echoed_sics(), None);
     }
 }
