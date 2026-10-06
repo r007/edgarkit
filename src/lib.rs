@@ -87,14 +87,21 @@ pub use options::FilingOptions;
 // Re-export core types and traits for a clean API
 #[cfg(feature = "company")]
 pub use company::{
-    CompanyConcept, CompanyFacts, CompanyTicker, CompanyTickerExchange, Frame, MutualFundTicker,
+    CompanyConcept, CompanyFacts, CompanyTicker, CompanyTickerExchange, DataPoint, Fact, Frame,
+    FrameDataPoint, MutualFundTicker, TaxonomyGroups,
 };
 #[cfg(feature = "filings")]
-pub use filings::{DetailedFiling, Directory, DirectoryItem, DirectoryResponse, Submission};
+pub use filings::{
+    Address, Addresses, DetailedFiling, Directory, DirectoryItem, DirectoryResponse, FilingFile,
+    FilingsData, FormerName, RecentFilings, Submission,
+};
 #[cfg(feature = "index")]
-pub use index::{EdgarDay, EdgarPeriod, IndexResponse, Quarter};
+pub use index::{
+    Directory as IndexDirectory, DirectoryItem as IndexDirectoryItem, EdgarDay, EdgarPeriod,
+    IndexResponse, ItemType, Quarter,
+};
 #[cfg(feature = "search")]
-pub use search::{Hit, Hits, SearchOptions, SearchResponse, TotalHits};
+pub use search::{Hit, Hits, SearchOptions, SearchResponse, Shards, Source, TotalHits};
 
 // Conditionally export traits
 #[cfg(feature = "company")]
